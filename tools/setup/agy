@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Description: Save, restore, or check Antigravity CLI OAuth token (defaults to Google Drive)
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+LOCAL_TOKEN_DIR="${HOME}/.gemini/antigravity-cli"
+LOCAL_TOKEN_FILE="${LOCAL_TOKEN_DIR}/antigravity-oauth-token"
+DEFAULT_BACKUP_PATH="/content/drive/MyDrive/.secrets/agy-token"
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox setup agy [command] [options]\n\n"
+    printf "${BOLD}Commands:${RESET}\n"
+    printf "  ${BOLD}restore${RESET}    Restore OAuth token from backup to local environment (default action)\n"
+    printf "  ${BOLD}save${RESET}       Save current local OAuth token to backup location\n"
+    printf "  ${BOLD}status${RESET}     Check local token and backup file existence\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --path, -p <path>  Specify custom backup path (default: ${CYAN}%s${RESET})\n" "$DEFAULT_BACKUP_PATH"
+    printf "  --help, -h         Show this help message\n\n"
+}
+
+ACTION="restore"
+BACKUP_PATH="$DEFAULT_BACKUP_PATH"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        save|export|backup)
+            ACTION="save"
+            shift
+            ;;
+        restore|import)
+            ACTION="restore"
+            shift
+            ;;
+        status|check)
+            ACTION="status"
+            shift
+            ;;
+        --path|-p)
+            BACKUP_PATH="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+case "$ACTION" in
+    save)
+        log_header "Antigravity Token: Save to Backup"
+        if [[ ! -s "$LOCAL_TOKEN_FILE" ]]; then
+            log_error "Local token file not found or empty: ${LOCAL_TOKEN_FILE}"
+            exit 1
+        fi
+
+        BACKUP_DIR="$(dirname "$BACKUP_PATH")"
+        mkdir -p "$BACKUP_DIR"
+        cp "$LOCAL_TOKEN_FILE" "$BACKUP_PATH"
+        chmod 600 "$BACKUP_PATH" 2>/dev/null || true
+        log_success "OAuth token backed up successfully to: ${CYAN}${BACKUP_PATH}${RESET}"
+        ;;
+
+    restore)
+        log_header "Antigravity Token: Restore from Backup"
+        if [[ ! -s "$BACKUP_PATH" ]]; then
+            log_error "Backup token file not found or empty: ${BACKUP_PATH}"
+            if [[ "$BACKUP_PATH" == /content/drive/* && ! -d "/content/drive/MyDrive" ]]; then
+                log_warn "Google Drive does not appear to be mounted at /content/drive."
+                log_info "Run './toolbox setup colab' to mount Drive and restore automatically."
+            fi
+            exit 1
+        fi
+
+        mkdir -p "$LOCAL_TOKEN_DIR"
+        cp "$BACKUP_PATH" "$LOCAL_TOKEN_FILE"
+        chmod 600 "$LOCAL_TOKEN_FILE"
+        log_success "OAuth token restored successfully to: ${CYAN}${LOCAL_TOKEN_FILE}${RESET}"
+        ;;
+
+    status)
+        log_header "Antigravity Token Status"
+        if [[ -s "$LOCAL_TOKEN_FILE" ]]; then
+            log_success "Local token present: ${LOCAL_TOKEN_FILE}"
+        else
+            log_warn "Local token missing or empty: ${LOCAL_TOKEN_FILE}"
+        fi
+
+        if [[ -s "$BACKUP_PATH" ]]; then
+            log_success "Backup token present: ${BACKUP_PATH}"
+        else
+            log_warn "Backup token missing: ${BACKUP_PATH}"
+        fi
+        ;;
+esac

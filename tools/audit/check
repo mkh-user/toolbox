@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Description: Fast static audit of bash syntax, script permissions, and secret leaks
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+log_header "Repository Code & Security Audit"
+
+ERRORS=0
+WARNINGS=0
+
+# 1. Shell Script Syntax Check (bash -n)
+printf "\n${BOLD}[1] Bash Syntax Validation (bash -n):${RESET}\n"
+SHELL_FILES=()
+
+# Find scripts
+while IFS= read -r f; do
+    [[ -n "$f" ]] && SHELL_FILES+=("$f")
+done < <(find "$TOOLBOX_ROOT" -type f \( -name "*.sh" -o -perm -111 \) ! -path "*/.git/*" 2>/dev/null || true)
+
+SYNTAX_OK=0
+for f in "${SHELL_FILES[@]}"; do
+    # Check if file has a bash shebang or .sh extension
+    first_line="$(head -n 1 "$f" 2>/dev/null || true)"
+    if [[ "$f" == *.sh || "$first_line" =~ bash ]]; then
+        if bash -n "$f" 2>/dev/null; then
+            SYNTAX_OK=$((SYNTAX_OK + 1))
+        else
+            log_error "Syntax error in: ${f#"${TOOLBOX_ROOT}/"}"
+            bash -n "$f" 2>&1 | sed 's/^/    /' || true
+            ERRORS=$((ERRORS + 1))
+        fi
+    fi
+done
+
+if [[ $ERRORS -eq 0 ]]; then
+    log_success "All ${SYNTAX_OK} shell script(s) passed syntax validation."
+fi
+
+# 2. Executable Permissions Audit
+printf "\n${BOLD}[2] Script Permissions Audit:${RESET}\n"
+NON_EXEC_TOOLS=0
+for cat_dir in "${TOOLBOX_ROOT}/tools"/*; do
+    if [[ -d "$cat_dir" ]]; then
+        cat_name="$(basename "$cat_dir")"
+        [[ "$cat_name" == "lib" ]] && continue
+
+        for tool_file in "${cat_dir}"/*; do
+            if [[ -f "$tool_file" && ! -x "$tool_file" ]]; then
+                log_warn "Missing executable permission (+x): ${tool_file#"${TOOLBOX_ROOT}/"}"
+                NON_EXEC_TOOLS=$((NON_EXEC_TOOLS + 1))
+                WARNINGS=$((WARNINGS + 1))
+            fi
+        done
+    fi
+done
+
+if [[ $NON_EXEC_TOOLS -eq 0 ]]; then
+    log_success "All tools in tools/ have valid executable permissions."
+else
+    log_info "Fix with: chmod +x tools/*/*"
+fi
+
+# 3. Secret & Credential Leak Scan
+printf "\n${BOLD}[3] Secret & Credential Leak Scan:${RESET}\n"
+LEAK_COUNT=0
+
+SECRET_PATTERNS=(
+    "-----BEGIN [A-Z ]*PRIVATE KEY-----"
+    "ghp_[a-zA-Z0-9]{20,}"
+    "gho_[a-zA-Z0-9]{20,}"
+    "AIza[0-9A-Za-z\\-_]{35}"
+    "AKIA[0-9A-Z]{16}"
+)
+
+for pattern in "${SECRET_PATTERNS[@]}"; do
+    matches="$(grep -rnE "$pattern" "$TOOLBOX_ROOT" \
+        --exclude-dir=".git" \
+        --exclude="*.tar.gz" \
+        --exclude="check" 2>/dev/null || true)"
+    
+    if [[ -n "$matches" ]]; then
+        while IFS= read -r match; do
+            log_error "Potential secret pattern matched: $match"
+            LEAK_COUNT=$((LEAK_COUNT + 1))
+            ERRORS=$((ERRORS + 1))
+        done <<< "$matches"
+    fi
+done
+
+if [[ $LEAK_COUNT -eq 0 ]]; then
+    log_success "No exposed credentials, private keys, or API tokens detected."
+fi
+
+# 4. Summary
+printf "\n${BOLD}Audit Summary:${RESET}\n"
+if [[ $ERRORS -eq 0 && $WARNINGS -eq 0 ]]; then
+    log_success "Audit PASSED (0 errors, 0 warnings)."
+    exit 0
+elif [[ $ERRORS -eq 0 ]]; then
+    log_warn "Audit PASSED with ${WARNINGS} warning(s)."
+    exit 0
+else
+    log_error "Audit FAILED (${ERRORS} error(s), ${WARNINGS} warning(s))."
+    exit 1
+fi

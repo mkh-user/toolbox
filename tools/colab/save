@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Description: Backup dotfiles, SSH, git, gh configs, and custom files to Google Drive tar.gz
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+DEFAULT_ARCHIVE="/content/drive/MyDrive/colab_backup.tar.gz"
+CUSTOM_LIST_FILE="${HOME}/.toolbox_persist_list"
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox colab save [options]\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --archive, -a <path>    Custom archive destination (default: ${CYAN}%s${RESET})\n" "$DEFAULT_ARCHIVE"
+    printf "  --include, -i <path>    Add additional file or directory to archive\n"
+    printf "  --help, -h              Show this help message\n\n"
+    printf "${BOLD}Default items saved (if present in $HOME):${RESET}\n"
+    printf "  • .gitconfig\n"
+    printf "  • .bashrc\n"
+    printf "  • .ssh/\n"
+    printf "  • .config/gh/\n"
+    printf "  • Any paths listed in ${CYAN}%s${RESET}\n\n" "$CUSTOM_LIST_FILE"
+}
+
+ARCHIVE_PATH="$DEFAULT_ARCHIVE"
+EXTRA_INCLUDES=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --archive|-a)
+            ARCHIVE_PATH="$2"
+            shift 2
+            ;;
+        --include|-i)
+            EXTRA_INCLUDES+=("$2")
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+log_header "Runtime Persistence: Save State"
+
+# Ensure Google Drive is accessible if saving to default path
+if [[ "$ARCHIVE_PATH" == /content/drive/* && ! -d "/content/drive/MyDrive" ]]; then
+    log_warn "Google Drive not detected at /content/drive. Attempting mount..."
+    python3 -c "
+try:
+    from google.colab import drive
+    drive.mount('/content/drive', force_remount=False)
+except Exception as e:
+    import sys
+    print(f'Drive mount error: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null || {
+        log_error "Could not access or mount Google Drive."
+        exit 1
+    }
+fi
+
+# Gather files to archive from $HOME
+ITEMS_TO_ARCHIVE=()
+
+# Core items relative to HOME
+CORE_CANDIDATES=(".gitconfig" ".bashrc" ".ssh" ".config/gh")
+for item in "${CORE_CANDIDATES[@]}"; do
+    if [[ -e "${HOME}/${item}" ]]; then
+        ITEMS_TO_ARCHIVE+=("$item")
+        log_info "Including: ~/${item}"
+    fi
+done
+
+# Read custom list file if present
+if [[ -f "$CUSTOM_LIST_FILE" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        [[ -z "$line" || "$line" =~ ^# ]] && continue
+        
+        # Strip leading ~/ or $HOME/
+        clean_item="${line#"${HOME}/"}"
+        clean_item="${clean_item#"~/"}"
+        if [[ -e "${HOME}/${clean_item}" ]]; then
+            ITEMS_TO_ARCHIVE+=("$clean_item")
+            log_info "Including (from manifest): ~/${clean_item}"
+        elif [[ -e "$line" ]]; then
+            log_warn "Absolute path outside HOME not directly bundled: $line (recommend placing inside HOME)"
+        else
+            log_warn "Manifest path not found: $line"
+        fi
+    done < "$CUSTOM_LIST_FILE"
+fi
+
+# Extra CLI includes
+for extra in "${EXTRA_INCLUDES[@]}"; do
+    clean_extra="${extra#"${HOME}/"}"
+    clean_extra="${clean_extra#"~/"}"
+    if [[ -e "${HOME}/${clean_extra}" ]]; then
+        ITEMS_TO_ARCHIVE+=("$clean_extra")
+        log_info "Including (CLI flag): ~/${clean_extra}"
+    else
+        log_warn "CLI include path not found: $extra"
+    fi
+done
+
+if [[ ${#ITEMS_TO_ARCHIVE[@]} -eq 0 ]]; then
+    log_warn "No targeted files found to archive."
+    exit 0
+fi
+
+# Ensure destination directory exists
+mkdir -p "$(dirname "$ARCHIVE_PATH")"
+
+# Create tar.gz archive
+log_info "Creating archive: ${CYAN}${ARCHIVE_PATH}${RESET}..."
+tar -czf "$ARCHIVE_PATH" -C "$HOME" "${ITEMS_TO_ARCHIVE[@]}"
+
+ARCHIVE_SIZE="$(du -h "$ARCHIVE_PATH" | cut -f1)"
+log_success "Saved ${#ITEMS_TO_ARCHIVE[@]} item(s) to ${CYAN}${ARCHIVE_PATH}${RESET} (${ARCHIVE_SIZE})"

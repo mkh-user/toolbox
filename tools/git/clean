@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Description: Safely clean cache directories (__pycache__, pytest, ruff) and temporary files
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+log_header "Git & Workspace Cache Cleaner"
+
+FORCE=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --force|-f)
+            FORCE=1
+            shift
+            ;;
+        --help|-h)
+            printf "${BOLD}Usage:${RESET} ./toolbox git clean [--force]\n\n"
+            printf "Removes cache directories (__pycache__, .pytest_cache) and temporary files.\n"
+            printf "Runs in dry-run preview mode unless --force or -f is specified.\n\n"
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# Find targets
+CACHE_DIRS=()
+while IFS= read -r dir; do
+    [[ -n "$dir" ]] && CACHE_DIRS+=("$dir")
+done < <(find "$REPO_ROOT" -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".ruff_cache" -o -name ".mypy_cache" \) 2>/dev/null || true)
+
+TEMP_FILES=()
+while IFS= read -r file; do
+    [[ -n "$file" ]] && TEMP_FILES+=("$file")
+done < <(find "$REPO_ROOT" -type f \( -name "*.pyc" -o -name "*.pyo" -o -name ".DS_Store" -o -name "*~" \) 2>/dev/null || true)
+
+TOTAL_COUNT=$((${#CACHE_DIRS[@]} + ${#TEMP_FILES[@]}))
+
+if [[ $TOTAL_COUNT -eq 0 ]]; then
+    log_success "Workspace is clean. No dangling cache directories or temporary files found."
+    exit 0
+fi
+
+log_info "Found ${BOLD}${TOTAL_COUNT}${RESET} cache/temporary item(s):"
+for d in "${CACHE_DIRS[@]}"; do
+    printf "  ${YELLOW}[dir]${RESET}  %s\n" "${d#"${REPO_ROOT}/"}"
+done
+for f in "${TEMP_FILES[@]}"; do
+    printf "  ${DIM}[file]${RESET} %s\n" "${f#"${REPO_ROOT}/"}"
+done
+
+if [[ $FORCE -eq 0 ]]; then
+    printf "\n"
+    if confirm_action "Do you want to delete these items?" "n"; then
+        FORCE=1
+    else
+        log_info "Clean cancelled. Run with ${BOLD}--force${RESET} to clean non-interactively."
+        exit 0
+    fi
+fi
+
+if [[ $FORCE -eq 1 ]]; then
+    for d in "${CACHE_DIRS[@]}"; do
+        rm -rf "$d"
+    done
+    for f in "${TEMP_FILES[@]}"; do
+        rm -f "$f"
+    done
+    log_success "Cleaned ${TOTAL_COUNT} item(s)."
+fi

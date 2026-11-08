@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Description: Inspect environment status (Drive mount, GH_TOKEN secret, gh auth, agy tokens)
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+log_header "Environment & Credentials Status Check"
+
+# 1. Google Drive Status
+printf "\n${BOLD}[1] Google Drive Mount:${RESET}\n"
+if [[ -d "/content/drive/MyDrive" ]]; then
+    log_success "Google Drive is mounted at /content/drive"
+else
+    log_warn "Google Drive is NOT mounted at /content/drive"
+    log_info "Run './toolbox setup colab' to mount it."
+fi
+
+# 2. Google Colab Secret (GH_TOKEN)
+printf "\n${BOLD}[2] Google Colab Secret (GH_TOKEN):${RESET}\n"
+HAS_SECRET="$(python3 -c "
+try:
+    from google.colab import userdata
+    t = userdata.get('GH_TOKEN')
+    print('yes' if t and len(t.strip()) > 0 else 'no')
+except Exception:
+    print('error')
+" 2>/dev/null || echo 'error')"
+
+if [[ "$HAS_SECRET" == "yes" ]]; then
+    log_success "'GH_TOKEN' secret is available in Colab Userdata"
+elif [[ "$HAS_SECRET" == "no" ]]; then
+    log_warn "'GH_TOKEN' secret is empty or missing from Colab Userdata"
+    log_info "Add it via Colab Sidebar -> Secrets -> GH_TOKEN"
+else
+    log_info "Colab userdata module not present (not running inside interactive Colab notebook kernel)"
+fi
+
+# 3. GitHub CLI Installation & Auth
+printf "\n${BOLD}[3] GitHub CLI (gh):${RESET}\n"
+if has_cmd gh; then
+    log_success "GitHub CLI (gh) is installed: $(gh --version | head -n 1)"
+    if gh auth status >/dev/null 2>&1; then
+        log_success "GitHub CLI is authenticated"
+        gh auth status 2>&1 | sed 's/^/    /' || true
+    else
+        log_warn "GitHub CLI is not authenticated"
+        log_info "Run './toolbox setup gh' to authenticate using your GH_TOKEN secret."
+    fi
+else
+    log_error "GitHub CLI (gh) is not installed."
+fi
+
+# 4. Antigravity CLI & OAuth Tokens
+printf "\n${BOLD}[4] Antigravity CLI (agy) & Tokens:${RESET}\n"
+if has_cmd agy; then
+    log_success "Antigravity CLI (agy) is in PATH: $(which agy)"
+else
+    log_info "Antigravity CLI binary not directly in default PATH (may be running as internal agent daemon)"
+fi
+
+LOCAL_TOKEN="${HOME}/.gemini/antigravity-cli/antigravity-oauth-token"
+BACKUP_TOKEN="/content/drive/MyDrive/.secrets/agy-token"
+
+if [[ -s "$LOCAL_TOKEN" ]]; then
+    log_success "Local Antigravity token found: ${LOCAL_TOKEN}"
+else
+    log_warn "Local Antigravity token missing: ${LOCAL_TOKEN}"
+fi
+
+if [[ -s "$BACKUP_TOKEN" ]]; then
+    log_success "Backup Antigravity token found: ${BACKUP_TOKEN}"
+else
+    log_warn "Backup Antigravity token missing at: ${BACKUP_TOKEN}"
+    log_info "Once authenticated, save your token with: ./toolbox setup agy save"
+fi
+
+printf "\n"

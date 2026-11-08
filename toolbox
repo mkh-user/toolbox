@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# toolbox - Root CLI dispatcher for developer & agent tools
+set -eo pipefail
+
+# Resolve toolbox repository root
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SCRIPT_SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd)"
+    SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+    [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$DIR/$SCRIPT_SOURCE"
+done
+TOOLBOX_ROOT="$(cd -P "$(dirname "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd)"
+TOOLS_DIR="${TOOLBOX_ROOT}/tools"
+
+# Source shared library
+# shellcheck source=tools/lib/common.sh
+source "${TOOLS_DIR}/lib/common.sh"
+
+get_tool_description() {
+    local file_path="$1"
+    local desc=""
+    if [[ -f "$file_path" ]]; then
+        desc="$(grep -m 1 -E '^# Description:' "$file_path" | sed -E 's/^# Description:[[:space:]]*//' || true)"
+        if [[ -z "$desc" ]]; then
+            desc="$(grep -m 1 -E '^# ' "$file_path" | grep -v '^#!' | sed -E 's/^#[[:space:]]*//' || true)"
+        fi
+    fi
+    printf "%s" "${desc:-No description provided}"
+}
+
+show_general_help() {
+    printf "${BOLD}${CYAN}Toolbox${RESET} - Advanced skills & professional-grade tools to use everywhere\n\n"
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox <category> <command> [arguments...]\n"
+    printf "  ./toolbox <category> --help\n"
+    printf "  ./toolbox --help\n\n"
+
+    printf "${BOLD}Available Categories & Tools:${RESET}\n"
+
+    for cat_dir in "${TOOLS_DIR}"/*; do
+        if [[ -d "$cat_dir" ]]; then
+            local cat_name
+            cat_name="$(basename "$cat_dir")"
+            [[ "$cat_name" == "lib" ]] && continue
+
+            printf "\n  ${MAGENTA}%s${RESET}\n" "$cat_name"
+            local found=0
+            for tool_file in "${cat_dir}"/*; do
+                if [[ -f "$tool_file" && -x "$tool_file" ]]; then
+                    local tool_name
+                    tool_name="$(basename "$tool_file")"
+                    local desc
+                    desc="$(get_tool_description "$tool_file")"
+                    printf "    ${BOLD}%-16s${RESET} %s\n" "$tool_name" "$desc"
+                    found=1
+                fi
+            done
+            if [[ $found -eq 0 ]]; then
+                printf "    ${DIM}(No executable tools found in category)${RESET}\n"
+            fi
+        fi
+    done
+
+    printf "\n${BOLD}Agent Assets:${RESET}\n"
+    printf "  ${DIM}Rules and skills are located in ${CYAN}agent/rules/${DIM} and ${CYAN}agent/skills/${RESET}\n\n"
+}
+
+show_category_help() {
+    local category="$1"
+    local cat_dir="${TOOLS_DIR}/${category}"
+
+    if [[ ! -d "$cat_dir" || "$category" == "lib" ]]; then
+        log_error "Category '${category}' not found."
+        printf "\nRun ${BOLD}./toolbox --help${RESET} to see all available categories.\n"
+        exit 1
+    fi
+
+    printf "${BOLD}${CYAN}Toolbox Category:${RESET} ${MAGENTA}%s${RESET}\n\n" "$category"
+    printf "${BOLD}Commands:${RESET}\n"
+
+    local found=0
+    for tool_file in "${cat_dir}"/*; do
+        if [[ -f "$tool_file" && -x "$tool_file" ]]; then
+            local tool_name
+            tool_name="$(basename "$tool_file")"
+            local desc
+            desc="$(get_tool_description "$tool_file")"
+            printf "  ${BOLD}%-18s${RESET} %s\n" "$tool_name" "$desc"
+            found=1
+        fi
+    done
+
+    if [[ $found -eq 0 ]]; then
+        printf "  ${DIM}(No executable tools found in this category)${RESET}\n"
+    fi
+
+    printf "\n${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox %s <command> [arguments...]\n\n" "$category"
+}
+
+# Main routing logic
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" || "$1" == "help" ]]; then
+    show_general_help
+    exit 0
+fi
+
+CATEGORY="$1"
+shift
+
+if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" || "$1" == "help" ]]; then
+    show_category_help "$CATEGORY"
+    exit 0
+fi
+
+COMMAND="$1"
+shift
+
+TARGET_TOOL="${TOOLS_DIR}/${CATEGORY}/${COMMAND}"
+
+if [[ -f "$TARGET_TOOL" && -x "$TARGET_TOOL" ]]; then
+    exec "$TARGET_TOOL" "$@"
+else
+    log_error "Command '${COMMAND}' not found in category '${CATEGORY}'."
+    printf "\nAvailable commands in ${MAGENTA}%s${RESET}:\n" "$CATEGORY"
+    show_category_help "$CATEGORY"
+    exit 1
+fi

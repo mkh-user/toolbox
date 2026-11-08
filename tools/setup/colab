@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Description: One-stop Colab init: mount Google Drive, authenticate gh from secrets, restore agy token
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+log_header "Google Colab Environment Initialization"
+
+# 1. Mount Google Drive if not already mounted
+log_info "Step 1/3: Checking Google Drive mount..."
+python3 -c "
+import os, sys
+try:
+    if os.path.isdir('/content/drive/MyDrive'):
+        print('Google Drive is already mounted at /content/drive')
+    else:
+        from google.colab import drive
+        print('Mounting Google Drive at /content/drive...')
+        drive.mount('/content/drive', force_remount=False)
+except Exception as e:
+    print(f'Error mounting Google Drive: {e}', file=sys.stderr)
+    sys.exit(1)
+"
+log_success "Google Drive ready."
+
+# 2. Authenticate GitHub CLI from Colab Secrets
+log_info "Step 2/3: Configuring GitHub CLI authentication..."
+if "${TOOLBOX_ROOT}/tools/setup/gh"; then
+    log_success "GitHub CLI configured."
+else
+    log_warn "GitHub CLI setup encountered issues. You can re-run './toolbox setup gh' independently."
+fi
+
+# 3. Restore Antigravity OAuth Token
+log_info "Step 3/3: Restoring Antigravity CLI token..."
+if "${TOOLBOX_ROOT}/tools/setup/agy" restore; then
+    log_success "Antigravity CLI token restored."
+else
+    log_warn "Antigravity token restore encountered issues. Check if backup exists or save one with './toolbox setup agy save'."
+fi
+
+log_header "Initialization Summary"
+log_success "Colab setup sequence finished."

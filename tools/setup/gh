@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Description: Authenticate GitHub CLI using GH_TOKEN strictly from Google Colab Secrets
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+log_header "GitHub CLI Setup (Colab Secrets)"
+
+# 1. Verify gh is installed
+if ! has_cmd gh; then
+    log_error "GitHub CLI (gh) is not installed."
+    log_info "On Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y gh"
+    exit 1
+fi
+
+# 2. Retrieve GH_TOKEN strictly from Google Colab userdata
+log_info "Fetching 'GH_TOKEN' from Google Colab Secrets..."
+
+TOKEN="$(python3 -c "
+import sys
+try:
+    from google.colab import userdata
+    token = userdata.get('GH_TOKEN')
+    if token:
+        print(token.strip())
+    else:
+        sys.exit(1)
+except Exception as e:
+    sys.exit(1)
+" 2>/dev/null || true)"
+
+if [[ -z "$TOKEN" ]]; then
+    log_error "Failed to retrieve 'GH_TOKEN' from Google Colab Secrets."
+    printf "\n${YELLOW}How to fix:${RESET}\n"
+    printf "  1. In the Colab sidebar, click the Key icon (Secrets / User Data).\n"
+    printf "  2. Add a new secret with Name: ${BOLD}GH_TOKEN${RESET}\n"
+    printf "  3. Paste your GitHub Personal Access Token into Value.\n"
+    printf "  4. Ensure 'Notebook access' toggle is ENABLED for this notebook.\n\n"
+    exit 1
+fi
+
+# 3. Authenticate with gh
+log_info "Authenticating with GitHub CLI..."
+if printf "%s" "$TOKEN" | gh auth login --with-token 2>/dev/null; then
+    log_success "Successfully authenticated with GitHub CLI."
+else
+    log_error "GitHub authentication failed. Please check that GH_TOKEN has valid permissions."
+    exit 1
+fi
+
+# 4. Display status
+gh auth status || true

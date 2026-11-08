@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Description: Restore dotfiles, SSH, git, and configs from Google Drive backup tar.gz
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+DEFAULT_ARCHIVE="/content/drive/MyDrive/colab_backup.tar.gz"
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox colab restore [options]\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --archive, -a <path>    Specify custom archive path (default: ${CYAN}%s${RESET})\n" "$DEFAULT_ARCHIVE"
+    printf "  --help, -h              Show this help message\n\n"
+}
+
+ARCHIVE_PATH="$DEFAULT_ARCHIVE"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --archive|-a)
+            ARCHIVE_PATH="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+log_header "Runtime Persistence: Restore State"
+
+# Verify Drive accessibility if using default path
+if [[ "$ARCHIVE_PATH" == /content/drive/* && ! -d "/content/drive/MyDrive" ]]; then
+    log_warn "Google Drive not detected at /content/drive. Attempting mount..."
+    python3 -c "
+try:
+    from google.colab import drive
+    drive.mount('/content/drive', force_remount=False)
+except Exception as e:
+    import sys
+    print(f'Drive mount error: {e}', file=sys.stderr)
+    sys.exit(1)
+" 2>/dev/null || {
+        log_error "Could not access or mount Google Drive."
+        exit 1
+    }
+fi
+
+if [[ ! -f "$ARCHIVE_PATH" ]]; then
+    log_error "Backup archive not found: ${ARCHIVE_PATH}"
+    log_info "Create a backup first with: ./toolbox colab save"
+    exit 1
+fi
+
+log_info "Extracting state from: ${CYAN}${ARCHIVE_PATH}${RESET} into ${HOME}..."
+tar -xzf "$ARCHIVE_PATH" -C "$HOME" --overwrite
+
+# Fix SSH permissions if restored
+if [[ -d "${HOME}/.ssh" ]]; then
+    chmod 700 "${HOME}/.ssh" 2>/dev/null || true
+    chmod 600 "${HOME}/.ssh"/id_* 2>/dev/null || true
+    chmod 644 "${HOME}/.ssh"/*.pub 2>/dev/null || true
+fi
+
+log_success "State restored successfully."
+log_info "Extracted archive contents:"
+tar -tzf "$ARCHIVE_PATH" | sed 's/^/  • ~/'
