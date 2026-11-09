@@ -13,6 +13,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   - `tools/audit/check` now accepts an optional target directory path argument (`./toolbox audit check [path]`), defaulting to the current working directory.
   - Added automated Heading Laws audit: detects and rejects numbered headings, parenthetical headings, and trailing punctuation in markdown files.
   - Added intra-document link checker: validates relative links and file references with zero broken links permitted.
+  - Added git tracking audit: validates that all core scripts and libraries in `tools/` are trackable by version control and not blocked by `.gitignore`.
+
+### Fixed
+- **Git Ignore Inadvertent Library Matching**:
+  - Resolved broad `lib/` pattern in `.gitignore` that was inadvertently ignoring `tools/lib/common.sh`, ensuring core shared utilities are tracked.
 - **GitHub Community Templates**:
   - Added `.github/ISSUE_TEMPLATE/bug_report.md` structured around minimal reproducible examples and terminal logs.
   - Added `.github/ISSUE_TEMPLATE/feature_request.md` structured around problem statements, architectural proposals, and trade-offs.

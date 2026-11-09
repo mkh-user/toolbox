@@ -45,8 +45,8 @@ if [[ $ERRORS -eq 0 ]]; then
     log_success "All ${SYNTAX_OK} shell script(s) passed syntax validation."
 fi
 
-# Script Permissions Audit
-printf "\n${BOLD}Script Permissions Audit${RESET}\n"
+# Script Permissions and Tracking Audit
+printf "\n${BOLD}Script Permissions and Tracking Audit${RESET}\n"
 NON_EXEC_TOOLS=0
 if [[ -d "${TARGET_DIR}/tools" ]]; then
     for cat_dir in "${TARGET_DIR}/tools"/*; do
@@ -68,6 +68,23 @@ if [[ -d "${TARGET_DIR}/tools" ]]; then
         log_success "All tools in tools/ have valid executable permissions."
     else
         log_info "Fix with: chmod +x tools/*/*"
+    fi
+
+    # Verify no core tools or library files are accidentally ignored by .gitignore
+    if git -C "$TARGET_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        IGNORED_CORE=0
+        while IFS= read -r core_file; do
+            [[ -z "$core_file" ]] && continue
+            if git -C "$TARGET_DIR" check-ignore -q "$core_file" 2>/dev/null; then
+                log_error "Core script is ignored by .gitignore: ${core_file#"${TARGET_DIR}/"}"
+                ERRORS=$((ERRORS + 1))
+                IGNORED_CORE=$((IGNORED_CORE + 1))
+            fi
+        done < <(find "${TARGET_DIR}/tools" -type f 2>/dev/null || true)
+
+        if [[ $IGNORED_CORE -eq 0 ]]; then
+            log_success "All core tools and libraries are trackable by git (none blocked by .gitignore)."
+        fi
     fi
 else
     log_info "No tools/ directory present in target; skipping category permission audit."
