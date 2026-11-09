@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Description: Display full documentation and operational guidelines for a specified skill
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+SKILL_NAME=""
+RAW=0
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox skills show <skill-name> [options]\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --raw       Print raw markdown content without headers\n"
+    printf "  -h, --help  Show this help message\n\n"
+    printf "${BOLD}Example:${RESET}\n"
+    printf "  ./toolbox skills show readme-architect\n"
+    printf "  ./toolbox skills show devops-architect\n\n"
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --raw)
+            RAW=1
+            shift
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            if [[ -z "$SKILL_NAME" ]]; then
+                SKILL_NAME="$1"
+                shift
+            else
+                log_error "Unknown option: $1"
+                show_usage
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ -z "$SKILL_NAME" ]]; then
+    log_error "Please specify a skill name."
+    printf "\n"
+    "${TOOLBOX_ROOT}/tools/skills/list"
+    exit 1
+fi
+
+SKILLS_DIR="${TOOLBOX_ROOT}/agent/skills"
+TARGET_FILE=""
+
+# 1. Exact directory match
+if [[ -f "${SKILLS_DIR}/${SKILL_NAME}/SKILL.md" ]]; then
+    TARGET_FILE="${SKILLS_DIR}/${SKILL_NAME}/SKILL.md"
+else
+    # 2. Case-insensitive or partial match
+    for dir in "${SKILLS_DIR}"/*; do
+        if [[ -d "$dir" ]]; then
+            base_name="$(basename "$dir")"
+            if [[ "${base_name,,}" == "${SKILL_NAME,,}" && -f "${dir}/SKILL.md" ]]; then
+                TARGET_FILE="${dir}/SKILL.md"
+                break
+            fi
+        fi
+    done
+fi
+
+if [[ -z "$TARGET_FILE" || ! -f "$TARGET_FILE" ]]; then
+    log_error "Skill '${SKILL_NAME}' not found."
+    printf "\nAvailable skills:\n"
+    "${TOOLBOX_ROOT}/tools/skills/list"
+    exit 1
+fi
+
+if [[ $RAW -eq 1 ]]; then
+    cat "$TARGET_FILE"
+    exit 0
+fi
+
+log_header "Skill: $(basename "$(dirname "$TARGET_FILE")")"
+printf "${DIM}Path: ${TARGET_FILE#"${TOOLBOX_ROOT}/"}${RESET}\n\n"
+
+# Render markdown
+if has_cmd bat; then
+    bat --style=plain --language=markdown "$TARGET_FILE"
+elif has_cmd mdcat; then
+    mdcat "$TARGET_FILE"
+else
+    cat "$TARGET_FILE"
+fi
+printf "\n"

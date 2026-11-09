@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Description: List all available agent skills with descriptions parsed from frontmatter
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+FORMAT="table"
+QUERY=""
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox skills list [options]\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  -q, --query <term>  Filter skills matching name or description\n"
+    printf "  -j, --json          Output machine-readable JSON array\n"
+    printf "  -h, --help          Show this help message\n\n"
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -j|--json)
+            FORMAT="json"
+            shift
+            ;;
+        -q|--query)
+            QUERY="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            # If positional argument passed without flag, treat as search query
+            if [[ -z "$QUERY" ]]; then
+                QUERY="$1"
+                shift
+            else
+                log_error "Unknown option: $1"
+                show_usage
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+SKILLS_DIR="${TOOLBOX_ROOT}/agent/skills"
+
+python3 -c "
+import os, sys, json, re
+
+skills_dir = sys.argv[1]
+output_format = sys.argv[2]
+search_query = sys.argv[3].lower() if len(sys.argv) > 3 else ''
+
+if not os.path.isdir(skills_dir):
+    print(f'Skills directory not found: {skills_dir}', file=sys.stderr)
+    sys.exit(1)
+
+skills = []
+
+for entry in sorted(os.listdir(skills_dir)):
+    skill_file = os.path.join(skills_dir, entry, 'SKILL.md')
+    if os.path.isfile(skill_file):
+        name = entry
+        desc = 'No description provided'
+        
+        try:
+            with open(skill_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            # Parse YAML frontmatter
+            if content.startswith('---'):
+                parts = content.split('---', 2)
+                if len(parts) >= 3:
+                    frontmatter = parts[1]
+                    for line in frontmatter.splitlines():
+                        if line.startswith('name:'):
+                            name = line.split('name:', 1)[1].strip()
+                        elif line.startswith('description:'):
+                            desc = line.split('description:', 1)[1].strip()
+        except Exception as e:
+            desc = f'Error reading frontmatter: {e}'
+
+        if search_query:
+            if search_query not in name.lower() and search_query not in desc.lower():
+                continue
+
+        skills.append({
+            'name': name,
+            'description': desc,
+            'path': f'agent/skills/{entry}/SKILL.md'
+        })
+
+if output_format == 'json':
+    print(json.dumps(skills, indent=2))
+else:
+    # Human readable output
+    bold = '\033[1m' if sys.stdout.isatty() else ''
+    cyan = '\033[36m' if sys.stdout.isatty() else ''
+    dim = '\033[2m' if sys.stdout.isatty() else ''
+    reset = '\033[0m' if sys.stdout.isatty() else ''
+    
+    if search_query:
+        print(f'{bold}Agent Skills matching \"{search_query}\":{reset} ({len(skills)} found)\n')
+    else:
+        print(f'{bold}Available Agent Skills:{reset} ({len(skills)} registered)\n')
+        
+    for s in skills:
+        print(f'  {cyan}{bold}{s[\"name\"]:<22}{reset} {s[\"description\"]}')
+        print(f'  {dim}↳ {s[\"path\"]}{reset}\n')
+" "$SKILLS_DIR" "$FORMAT" "$QUERY"

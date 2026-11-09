@@ -9,6 +9,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ## Unreleased
 
 ### Added
+- **Skill Discovery and Inspection Tooling (`tools/skills/`)**:
+  - `list`: Dynamically parses YAML frontmatter from all `agent/skills/*/SKILL.md` files; supports query filtering (`-q`) and machine-readable output (`--json`).
+  - `show`: Displays full documentation for any registered skill with clean terminal formatting and raw output option (`--raw`).
 - **Specialized Authoring and Governance Skills**:
   - `readme-architect`: Authoring anti-hype README files with architectural trade-offs and verified examples.
   - `agents-architect`: Safely evolving `AGENTS.md` operating manuals with protected sections and pre-flight audits.

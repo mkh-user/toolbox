@@ -51,6 +51,9 @@ toolbox/
 │   │   ├── diff-sum            # Working tree summary with change stats
 │   │   ├── commit              # Conventional commit helper
 │   │   └── clean               # Safe cache and temp cleaner
+│   ├── skills/                 # Agent skill discovery and inspection
+│   │   ├── list                # List registered skills with YAML descriptions
+│   │   └── show                # Display full documentation for a skill
 │   └── audit/                  # Code quality and security checks
 │       └── check               # Bash syntax, permissions, and secret scan
 └── agent/                       # AI Agent integration assets
@@ -96,6 +99,13 @@ toolbox/
 | `./toolbox git diff-sum` | Colorized summary of staged, unstaged, and untracked files with line diff stats. |
 | `./toolbox git commit` | Interactive helper to draft Conventional Commits. |
 | `./toolbox git clean` | Safely detects and purges cache directories and temp files with dry-run confirmation. |
+
+### Skill Inspection and Discovery
+
+| Command | Description |
+|---|---|
+| `./toolbox skills list` | Lists all registered agent skills with descriptions parsed from YAML frontmatter. Supports `-q <query>` and `-j/--json`. |
+| `./toolbox skills show <skill>` | Displays full operational documentation and guidelines for a specified skill. Supports `--raw`. |
 
 ### Code Quality and Security Auditing
 

@@ -13,6 +13,7 @@ flowchart TD
     CLI["<b>Root CLI Dispatcher</b><br/>./toolbox"] --> Setup["<b>setup</b><br/>gh, agy, colab, status"]
     CLI --> Colab["<b>colab</b><br/>save, restore"]
     CLI --> Git["<b>git</b><br/>commit, diff-sum, clean"]
+    CLI --> SkillsTool["<b>skills</b><br/>list, show"]
     CLI --> Audit["<b>audit</b><br/>check"]
     CLI --> Lib["<b>lib</b><br/>common.sh"]
     
@@ -94,6 +95,9 @@ toolbox/
 │   │   ├── diff-sum            # Working tree summary with change stats
 │   │   ├── commit              # Conventional Commit authoring tool
 │   │   └── clean               # Safe cache and temp cleaner
+│   ├── skills/                 # Agent skill discovery and inspection
+│   │   ├── list                # List registered skills with YAML descriptions
+│   │   └── show                # Display full documentation for a skill
 │   └── audit/                  # Repository auditing
 │       └── check               # Bash syntax, permissions, and secret scanner
 └── agent/                       # Agent intelligence assets
