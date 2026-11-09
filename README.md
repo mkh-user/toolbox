@@ -136,6 +136,7 @@ This repository includes native skills and rulesets to steer AI coding assistant
 - **[readme-architect](file:///content/toolbox/agent/skills/readme-architect/SKILL.md)**: Authoring anti-hype, high-signal README files.
 - **[agents-architect](file:///content/toolbox/agent/skills/agents-architect/SKILL.md)**: Creating and safely evolving AGENTS.md manuals.
 - **[repo-governance](file:///content/toolbox/agent/skills/repo-governance/SKILL.md)**: Open-source repository health and the unbroken link graph.
+- **[release-architect](file:///content/toolbox/agent/skills/release-architect/SKILL.md)**: High-impact GitHub release bodies, migration guides, and release gates.
 - **[security-hardener](file:///content/toolbox/agent/skills/security-hardener/SKILL.md)**: Secret zero-leakage, dependency CVE audits, and memory safety.
 - **[root-cause-debugger](file:///content/toolbox/agent/skills/root-cause-debugger/SKILL.md)**: Minimal reproducible examples, tracing, and invariant repair.
 - **[devops-architect](file:///content/toolbox/agent/skills/devops-architect/SKILL.md)**: CI workflows, least-privilege permissions, and toolchain pinning.

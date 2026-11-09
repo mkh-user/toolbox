@@ -110,7 +110,15 @@ toolbox/
         ├── toolbox/            # Skill for toolbox command execution
         ├── git-assistant/      # Git hygiene and diff analysis
         ├── code-auditor/       # Static code quality and secret detection
-        └── advanced-programmer/# Senior full-stack and systems standards
+        ├── advanced-programmer/# Senior full-stack and systems standards
+        ├── readme-architect/   # High-signal README authoring
+        ├── agents-architect/   # AGENTS.md authoring and safe evolution
+        ├── repo-governance/    # Open-source health and unbroken link chain
+        ├── release-architect/  # GitHub release bodies and migration guides
+        ├── security-hardener/  # Secret defense and supply-chain audits
+        ├── root-cause-debugger/# Forensic debugging and invariant repairs
+        ├── devops-architect/   # CI design and toolchain pinning
+        └── workflow-scaffolder/# Reusable CLI script scaffolding
 ```
 
 ---

@@ -16,6 +16,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   - `readme-architect`: Authoring anti-hype README files with architectural trade-offs and verified examples.
   - `agents-architect`: Safely evolving `AGENTS.md` operating manuals with protected sections and pre-flight audits.
   - `repo-governance`: Ensuring open-source health checklists and the unbroken link reachability graph.
+  - `release-architect`: Authoring anti-hype GitHub release bodies, breaking change migration guides, and pre-flight release gates.
   - `security-hardener`: Secret zero-leakage defense, dependency supply-chain audits, and memory-safety verification.
   - `root-cause-debugger`: Forensic debugging workflows, minimal reproducible examples, and invariant repairs.
   - `devops-architect`: GitHub Actions CI design, least-privilege permissions, and toolchain pinning.
