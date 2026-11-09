@@ -31,6 +31,9 @@ cd toolbox
 ```
 toolbox/
 ├── toolbox                      # Unified root CLI dispatcher (auto-discovery)
+├── AGENTS.md                    # Operating manual & boundaries for AI assistants
+├── CHANGELOG.md                 # SemVer release history (Keep a Changelog)
+├── README.md                    # Primary documentation & usage manual
 ├── tools/                       # Executable CLI tools (category namespaced)
 │   ├── lib/
 │   │   └── common.sh           # Shared terminal colors, logging, and helpers
@@ -49,8 +52,8 @@ toolbox/
 │   └── audit/                  # Code quality and security checks
 │       └── check               # Static bash syntax, permissions, and secret scan
 └── agent/                       # AI Agent integration assets
-    ├── skills/                 # Agent skills (toolbox, git-assistant, auditor, programmer)
-    └── rules/                  # Behavioral rulesets (safety, code-quality, git)
+    ├── skills/                 # Agent skills (advanced-programmer, toolbox, git, audit)
+    └── rules/                  # Behavioral rulesets (interaction, safety, code-quality, git)
 ```
 
 ### Key Principles
@@ -104,16 +107,26 @@ toolbox/
 
 This repository includes native skills and rulesets to supercharge AI coding assistants:
 
+### Operating Manual (`AGENTS.md`)
+- **[`AGENTS.md`](file:///content/toolbox/AGENTS.md)**: Authoritative architecture blueprint, verification runbook, and non-negotiable boundaries for autonomous agents.
+
 ### Rulesets (`agent/rules/`)
+- **[`interaction.md`](file:///content/toolbox/agent/rules/interaction.md)**: 3-Phase collaboration protocol (Explore=Mentor, Plan=Grill, Code=Execute) and the Zero-Guessing rule ("Grill, don't guess").
 - **[`safety.md`](file:///content/toolbox/agent/rules/safety.md)**: Safe autonomous behavior, credential protection, and confirmation protocols.
-- **[`code-quality.md`](file:///content/toolbox/agent/rules/code-quality.md)**: Polyglot engineering standards (Bash safety flags, Python typing, zero unnecessary dependencies).
+- **[`code-quality.md`](file:///content/toolbox/agent/rules/code-quality.md)**: Polyglot engineering standards, Systems/Rust rules, and uniform documentation density.
 - **[`git.md`](file:///content/toolbox/agent/rules/git.md)**: Conventional Commits standard and atomic diff hygiene.
 
 ### Agent Skills (`agent/skills/`)
+- **[`advanced-programmer/SKILL.md`](file:///content/toolbox/agent/skills/advanced-programmer/SKILL.md)**: Senior full-stack & systems engineering standards across Architecture, Systems/Rust, Code Review, Testing, Debugging, Documentation, README/AGENTS.md authoring, Changelogs, UX/DX, and DevOps.
 - **[`toolbox/SKILL.md`](file:///content/toolbox/agent/skills/toolbox/SKILL.md)**: Full navigation guide for agents to run and manage toolbox commands.
 - **[`git-assistant/SKILL.md`](file:///content/toolbox/agent/skills/git-assistant/SKILL.md)**: Diff analysis, conventional commit authoring, and branch hygiene.
 - **[`code-auditor/SKILL.md`](file:///content/toolbox/agent/skills/code-auditor/SKILL.md)**: Static analysis, syntax verification, and secret scanning.
-- **[`advanced-programmer/SKILL.md`](file:///content/toolbox/agent/skills/advanced-programmer/SKILL.md)**: Senior-grade standards for Architecture, Code Review, Testing, Debugging, Documentation, Content Generation, UX, and DevOps.
+
+---
+
+## 📜 Release History
+
+See **[`CHANGELOG.md`](file:///content/toolbox/CHANGELOG.md)** for detailed release notes adhering to the Keep a Changelog standard.
 
 ---
 
