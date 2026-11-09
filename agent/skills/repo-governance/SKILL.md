@@ -15,8 +15,8 @@ Every document, rule, and skill in the repository must be connected through an e
 
 ### Zero Orphaned Files
 - No markdown guide, operational rule, or skill definition may exist in isolation without a direct relative link from primary entry anchors.
-- Human Entry Point: [README.md](file:///content/toolbox/README.md) links to all high-level governance, guides, and contributing workflows.
-- Agent Entry Point: [AGENTS.md](file:///content/toolbox/AGENTS.md) links to all behavioral rules, executable tools, and agent skills.
+- Human Entry Point: [README.md](../../../README.md) links to all high-level governance, guides, and contributing workflows.
+- Agent Entry Point: [AGENTS.md](../../../AGENTS.md) links to all behavioral rules, executable tools, and agent skills.
 
 ### Relative Navigation Integrity
 - All intra-repository links must use valid relative or file links that resolve reliably across local file systems and GitHub web interfaces.

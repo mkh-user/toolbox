@@ -9,13 +9,28 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ## Unreleased
 
 ### Added
-- **Multi-Repo Audit and Link Integrity Checker**:
+- **Continuous Integration Pipeline**:
+  - Added `.github/workflows/ci.yml` running static code/security audits and automated tests on pushes and PRs to `main` using least-privilege `contents: read` permissions and dynamically verified `actions/checkout@v7`.
+- **Automated Regression Test Suite**:
+  - Added zero-dependency Bash test runner `tests/run_tests.sh` executing hermetic regression tests across CLI dispatching, dynamic category auto-discovery, skill rendering, and multi-repo static audits.
+- **Multi-Repo Audit and Target Path Support**:
   - `tools/audit/check` now accepts an optional target directory path argument (`./toolbox audit check [path]`), defaulting to the current working directory.
+  - Added `--help` and `-h` flags to display full audit capabilities and parameter usage.
   - Added automated Heading Laws audit: detects and rejects numbered headings, parenthetical headings, and trailing punctuation in markdown files.
   - Added intra-document link checker: validates relative links and file references with zero broken links permitted.
   - Added git tracking audit: validates that all core scripts and libraries in `tools/` are trackable by version control and not blocked by `.gitignore`.
 
+### Changed
+- **Relative Link Migration**:
+  - Converted all documentation references across `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, and skills from absolute machine URIs to portable relative markdown links.
+
+### Removed
+- **Redundant Git Tool Wrappers**:
+  - Dropped `tools/git/` wrapper scripts (`clean`, `commit`, `diff-sum`) in favor of native Git commands; updated `agent/skills/git-assistant/SKILL.md` and `toolbox` documentation accordingly.
+
 ### Fixed
+- **OS Files Git Ignored**:
+  - Added `.DS_Store`, Spotlight, and thumb files to `.gitignore`.
 - **Git Ignore Inadvertent Library Matching**:
   - Resolved broad `lib/` pattern in `.gitignore` that was inadvertently ignoring `tools/lib/common.sh`, ensuring core shared utilities are tracked.
 - **GitHub Community Templates**:

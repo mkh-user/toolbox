@@ -1,0 +1,32 @@
+name: "Continuous Integration"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: "Static Code and Security Audit"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v7
+
+      - name: "Run Static Code and Security Audit"
+        run: ./toolbox audit check
+
+  tests:
+    name: "Automated Test Suite"
+    needs: [audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v7
+
+      - name: "Run Automated Test Suite"
+        run: ./tests/run_tests.sh

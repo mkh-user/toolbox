@@ -38,7 +38,7 @@ toolbox/
 │   │   ├── agy                 # Backup, restore, status for Antigravity token
 │   │   └── status              # Environment and credential inspector
 │   ├── colab/                  # Runtime persistence, backup, and restore
-│   ├── git/                    # Git workflow and hygiene helpers
+│   ├── skills/                 # Agent skill discovery and inspection
 │   └── audit/                  # Static syntax and security scanner
 └── agent/
     ├── skills/                 # Agent operational skills
@@ -87,23 +87,6 @@ Save runtime state to Google Drive:
 Restore runtime state from Google Drive:
 ```bash
 ./toolbox colab restore
-```
-
-### Git and Hygiene Helpers
-
-Inspect working tree:
-```bash
-./toolbox git diff-sum
-```
-
-Conventional commit helper:
-```bash
-./toolbox git commit -t feat -s setup -m "add status inspector"
-```
-
-Clean caches:
-```bash
-./toolbox git clean [--force]
 ```
 
 ### Code and Security Audit

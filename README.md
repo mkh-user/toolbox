@@ -45,7 +45,7 @@ Commands follow a predictable hierarchy: `./toolbox <category> <command> [args..
 ### Thoughtful Defaults
 - Drive not mounted? `./toolbox setup colab` detects and initializes Google Drive access.
 - GitHub token needed? `./toolbox setup gh` retrieves credentials strictly from Colab Userdata secrets without terminal exposure.
-- Cache cleanup? `./toolbox git clean` runs in non-destructive preview mode by default.
+- Code health? `./toolbox audit check` verifies bash syntax, permissions, secret hygiene, and relative link integrity.
 - Script permissions dropped? `./toolbox audit check` audits executable bits and flags missing permissions.
 
 ### Why Toolbox Instead of Existing Alternatives
@@ -74,6 +74,13 @@ toolbox/
 ├── CONTRIBUTING.md              # Contributor guidelines and PR standards
 ├── SECURITY.md                  # Security and disclosure policy
 ├── README.md                    # Primary user manual
+├── .github/                     # Issue templates and GitHub Actions CI
+│   ├── ISSUE_TEMPLATE/         # Bug and feature request templates
+│   ├── PULL_REQUEST_TEMPLATE.md# Contributor PR checklist
+│   └── workflows/
+│       └── ci.yml              # Automated continuous integration pipeline
+├── tests/                       # Automated regression test suite
+│   └── run_tests.sh            # Zero-dependency Bash test runner
 ├── tools/                       # Category-namespaced executable CLI tools
 │   ├── lib/
 │   │   └── common.sh           # Shared terminal formatting and logging
@@ -85,15 +92,11 @@ toolbox/
 │   ├── colab/                  # Runtime persistence, backup, and restore
 │   │   ├── save                # Backup configs to Google Drive tarball
 │   │   └── restore             # Restore state from Google Drive tarball
-│   ├── git/                    # Git automation and hygiene helpers
-│   │   ├── diff-sum            # Working tree summary with change stats
-│   │   ├── commit              # Conventional commit helper
-│   │   └── clean               # Safe cache and temp cleaner
 │   ├── skills/                 # Agent skill discovery and inspection
 │   │   ├── list                # List registered skills with YAML descriptions
 │   │   └── show                # Display full documentation for a skill
 │   └── audit/                  # Code quality and security checks
-│       └── check               # Bash syntax, permissions, and secret scan
+│       └── check               # Multi-repo syntax, permissions, links, and secret scan
 └── agent/                       # AI Agent integration assets
     ├── skills/                 # Agent operational skills
     └── rules/                  # Behavioral and coding rulesets
@@ -123,14 +126,6 @@ toolbox/
 | `./toolbox colab save -i <path>` | Include custom file or directory in backup archive. |
 | `./toolbox colab save -a <path>` | Save to custom backup path. |
 
-### Git Hygiene and Commit Helpers
-
-| Command | Description |
-|---|---|
-| `./toolbox git diff-sum` | Colorized summary of staged, unstaged, and untracked files with line diff stats. |
-| `./toolbox git commit` | Interactive helper to draft Conventional Commits. |
-| `./toolbox git clean` | Safely detects and purges cache directories and temp files with dry-run confirmation. |
-
 ### Skill Inspection and Discovery
 
 | Command | Description |
@@ -142,7 +137,8 @@ toolbox/
 
 | Command | Description |
 |---|---|
-| `./toolbox audit check` | Validates bash syntax, verifies script permissions, and scans for secret leaks. |
+| `./toolbox audit check [path]` | Validates bash syntax, script permissions, git tracking, secret leaks, heading laws, and relative links across the specified repository (defaults to current working directory). |
+| `./tests/run_tests.sh` | Zero-dependency automated regression test suite covering dispatcher discovery, skill rendering, and multi-repo static audits. |
 
 ---
 
@@ -151,30 +147,30 @@ toolbox/
 This repository includes native skills and rulesets to steer AI coding assistants across any project:
 
 ### Operating Manuals and Governance
-- **[AGENTS.md](file:///content/toolbox/AGENTS.md)**: Operating manual, verification runbook, and non-negotiables for autonomous assistants.
-- **[CONTRIBUTING.md](file:///content/toolbox/CONTRIBUTING.md)**: Human contributor standards and pull request expectations.
-- **[SECURITY.md](file:///content/toolbox/SECURITY.md)**: Vulnerability disclosure and credential safety protocols.
-- **[CHANGELOG.md](file:///content/toolbox/CHANGELOG.md)**: Version history adhering to the Keep a Changelog standard.
+- **[AGENTS.md](AGENTS.md)**: Operating manual, verification runbook, and non-negotiables for autonomous assistants.
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Human contributor standards and pull request expectations.
+- **[SECURITY.md](SECURITY.md)**: Vulnerability disclosure and credential safety protocols.
+- **[CHANGELOG.md](CHANGELOG.md)**: Version history adhering to the Keep a Changelog standard.
 
 ### Rulesets
-- **[interaction.md](file:///content/toolbox/agent/rules/interaction.md)**: Three-phase collaboration protocol and the Zero-Guessing rule.
-- **[safety.md](file:///content/toolbox/agent/rules/safety.md)**: Safe autonomous behavior, credential protection, and confirmation protocols.
-- **[code-quality.md](file:///content/toolbox/agent/rules/code-quality.md)**: Polyglot engineering standards, Systems and Rust rules, and uniform doc density.
-- **[git.md](file:///content/toolbox/agent/rules/git.md)**: Conventional Commits standard and atomic diff hygiene.
+- **[interaction.md](agent/rules/interaction.md)**: Three-phase collaboration protocol and the Zero-Guessing rule.
+- **[safety.md](agent/rules/safety.md)**: Safe autonomous behavior, credential protection, and confirmation protocols.
+- **[code-quality.md](agent/rules/code-quality.md)**: Polyglot engineering standards, Systems and Rust rules, and uniform doc density.
+- **[git.md](agent/rules/git.md)**: Conventional Commits standard and atomic diff hygiene.
 
 ### Agent Skills
-- **[advanced-programmer](file:///content/toolbox/agent/skills/advanced-programmer/SKILL.md)**: Senior full-stack and systems engineering standards.
-- **[readme-architect](file:///content/toolbox/agent/skills/readme-architect/SKILL.md)**: Authoring anti-hype, high-signal README files.
-- **[agents-architect](file:///content/toolbox/agent/skills/agents-architect/SKILL.md)**: Creating and safely evolving AGENTS.md manuals.
-- **[repo-governance](file:///content/toolbox/agent/skills/repo-governance/SKILL.md)**: Open-source repository health and the unbroken link graph.
-- **[release-architect](file:///content/toolbox/agent/skills/release-architect/SKILL.md)**: High-impact GitHub release bodies, migration guides, and release gates.
-- **[security-hardener](file:///content/toolbox/agent/skills/security-hardener/SKILL.md)**: Secret zero-leakage, dependency CVE audits, and memory safety.
-- **[root-cause-debugger](file:///content/toolbox/agent/skills/root-cause-debugger/SKILL.md)**: Minimal reproducible examples, tracing, and invariant repair.
-- **[devops-architect](file:///content/toolbox/agent/skills/devops-architect/SKILL.md)**: CI workflows, least-privilege permissions, and toolchain pinning.
-- **[workflow-scaffolder](file:///content/toolbox/agent/skills/workflow-scaffolder/SKILL.md)**: Scaffolding reusable, self-documenting CLI tools.
-- **[toolbox](file:///content/toolbox/agent/skills/toolbox/SKILL.md)**: Navigation and execution guide for the native toolbox CLI.
-- **[git-assistant](file:///content/toolbox/agent/skills/git-assistant/SKILL.md)**: Diff analysis and conventional commit authoring.
-- **[code-auditor](file:///content/toolbox/agent/skills/code-auditor/SKILL.md)**: Static analysis, syntax verification, and secret scanning.
+- **[advanced-programmer](agent/skills/advanced-programmer/SKILL.md)**: Senior full-stack and systems engineering standards.
+- **[readme-architect](agent/skills/readme-architect/SKILL.md)**: Authoring anti-hype, high-signal README files.
+- **[agents-architect](agent/skills/agents-architect/SKILL.md)**: Creating and safely evolving AGENTS.md manuals.
+- **[repo-governance](agent/skills/repo-governance/SKILL.md)**: Open-source repository health and the unbroken link graph.
+- **[release-architect](agent/skills/release-architect/SKILL.md)**: High-impact GitHub release bodies, migration guides, and release gates.
+- **[security-hardener](agent/skills/security-hardener/SKILL.md)**: Secret zero-leakage, dependency CVE audits, and memory safety.
+- **[root-cause-debugger](agent/skills/root-cause-debugger/SKILL.md)**: Minimal reproducible examples, tracing, and invariant repair.
+- **[devops-architect](agent/skills/devops-architect/SKILL.md)**: CI workflows, least-privilege permissions, and toolchain pinning.
+- **[workflow-scaffolder](agent/skills/workflow-scaffolder/SKILL.md)**: Scaffolding reusable, self-documenting CLI tools.
+- **[toolbox](agent/skills/toolbox/SKILL.md)**: Navigation and execution guide for the native toolbox CLI.
+- **[git-assistant](agent/skills/git-assistant/SKILL.md)**: Diff analysis and conventional commit authoring.
+- **[code-auditor](agent/skills/code-auditor/SKILL.md)**: Static analysis, syntax verification, and secret scanning.
 
 ---
 

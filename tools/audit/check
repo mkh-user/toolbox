@@ -6,6 +6,21 @@ TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && 
 # shellcheck source=tools/lib/common.sh
 source "${TOOLBOX_ROOT}/tools/lib/common.sh"
 
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    printf "${BOLD}Usage:${RESET} ./toolbox audit check [path]\n\n"
+    printf "Run static code, security, permission, and documentation audits.\n\n"
+    printf "${BOLD}Arguments:${RESET}\n"
+    printf "  ${CYAN}[path]${RESET}    Directory path of repository to audit (defaults to current working directory)\n\n"
+    printf "${BOLD}Checks performed:${RESET}\n"
+    printf "  - Bash syntax verification (bash -n)\n"
+    printf "  - Executable permissions for tools\n"
+    printf "  - Git tracking integrity (.gitignore collision check)\n"
+    printf "  - Secret and credential leak detection\n"
+    printf "  - Typography and heading laws\n"
+    printf "  - Markdown link integrity\n"
+    exit 0
+fi
+
 TARGET_DIR="${1:-$PWD}"
 if [[ ! -d "$TARGET_DIR" ]]; then
     log_error "Target directory does not exist: ${TARGET_DIR}"

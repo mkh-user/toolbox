@@ -32,7 +32,7 @@ Maintainers will respond within 48 hours to confirm receipt and coordinate a pat
 
 ## Security Principles and Credential Protection
 
-All tools and AI agents operating within this project must strictly uphold the [Safety Rules](file:///content/toolbox/agent/rules/safety.md):
+All tools and AI agents operating within this project must strictly uphold the [Safety Rules](agent/rules/safety.md):
 
 - **Zero Secret Exposure**: Tokens, API keys, private keys, and passwords must never be committed to git, logged in terminal output, or written to disk.
 - **Isolation of Credentials**: Platform tokens must be sourced strictly from environment variables or secure platform stores such as Google Colab Userdata.
@@ -42,4 +42,4 @@ All tools and AI agents operating within this project must strictly uphold the [
 
 ## Contributor Guidelines
 
-For contribution and pull request standards, refer to [CONTRIBUTING.md](file:///content/toolbox/CONTRIBUTING.md).
+For contribution and pull request standards, refer to [CONTRIBUTING.md](CONTRIBUTING.md).

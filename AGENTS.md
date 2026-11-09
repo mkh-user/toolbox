@@ -12,7 +12,6 @@ Welcome to `toolbox`. This file serves as the definitive operating manual and be
 flowchart TD
     CLI["<b>Root CLI Dispatcher</b><br/>./toolbox"] --> Setup["<b>setup</b><br/>gh, agy, colab, status"]
     CLI --> Colab["<b>colab</b><br/>save, restore"]
-    CLI --> Git["<b>git</b><br/>commit, diff-sum, clean"]
     CLI --> SkillsTool["<b>skills</b><br/>list, show"]
     CLI --> Audit["<b>audit</b><br/>check"]
     CLI --> Lib["<b>lib</b><br/>common.sh"]
@@ -33,11 +32,14 @@ flowchart TD
 Always verify repository health before and after completing any work:
 
 ```bash
-# Run comprehensive code, syntax, permission, and security audit
-./toolbox audit check
+# Run comprehensive multi-repo code, syntax, permission, link, and security audit
+./toolbox audit check [path]
 
-# Check working tree diffs and untracked file status
-./toolbox git diff-sum
+# Execute automated test suite
+./tests/run_tests.sh
+
+# Check working tree status with native git
+git status -s
 
 # Test top-level CLI dispatcher auto-discovery
 ./toolbox --help
@@ -45,8 +47,13 @@ Always verify repository health before and after completing any work:
 # Test category commands
 ./toolbox setup status
 ./toolbox colab --help
-./toolbox git --help
+./toolbox skills list
 ```
+
+### Verification Suite and Target Path Support
+- **Multi-Repo Static Audit**: `./toolbox audit check [path]` performs an exhaustive audit of bash syntax, script executable permissions, git tracking collisions, credential leaks, heading typography laws, and relative markdown link integrity across the specified directory (defaults to `$PWD` if omitted).
+- **Automated Regression Suite**: `./tests/run_tests.sh` executes the zero-dependency test runner covering CLI dispatching, dynamic category auto-discovery, skill rendering, and multi-repo static audits.
+- **Continuous Integration Pipeline**: `.github/workflows/ci.yml` executes `./toolbox audit check` and `./tests/run_tests.sh` on every push and pull request to `main` using least-privilege `permissions: contents: read` and dynamically verified `actions/checkout@v7`.
 
 ---
 
@@ -80,6 +87,13 @@ toolbox/
 ├── CONTRIBUTING.md              # Contributor guide and PR standards
 ├── SECURITY.md                  # Vulnerability reporting policy
 ├── README.md                    # User manual and reference tables
+├── .github/                     # Issue templates and GitHub Actions CI
+│   ├── ISSUE_TEMPLATE/         # Bug and feature request issue templates
+│   ├── PULL_REQUEST_TEMPLATE.md# Pull request checklist
+│   └── workflows/
+│       └── ci.yml              # Automated continuous integration pipeline
+├── tests/                       # Automated regression test suite
+│   └── run_tests.sh            # Zero-dependency Bash test runner
 ├── tools/                       # Category-namespaced executable CLI tools
 │   ├── lib/
 │   │   └── common.sh           # Sourced helper library
@@ -91,15 +105,11 @@ toolbox/
 │   ├── colab/                  # Cloud runtime persistence
 │   │   ├── save                # Backup dotfiles to Google Drive tarball
 │   │   └── restore             # Restore files from Google Drive tarball
-│   ├── git/                    # Git workflow helpers
-│   │   ├── diff-sum            # Working tree summary with change stats
-│   │   ├── commit              # Conventional Commit authoring tool
-│   │   └── clean               # Safe cache and temp cleaner
 │   ├── skills/                 # Agent skill discovery and inspection
 │   │   ├── list                # List registered skills with YAML descriptions
 │   │   └── show                # Display full documentation for a skill
 │   └── audit/                  # Repository auditing
-│       └── check               # Bash syntax, permissions, and secret scanner
+│       └── check               # Multi-repo syntax, permissions, links, and secret scanner
 └── agent/                       # Agent intelligence assets
     ├── rules/                  # Behavioral and coding rulesets
     │   ├── interaction.md      # Collaboration and zero-guessing rules
@@ -120,6 +130,30 @@ toolbox/
         ├── devops-architect/   # CI design and toolchain pinning
         └── workflow-scaffolder/# Reusable CLI script scaffolding
 ```
+
+---
+
+## Agent Intelligence Resources
+
+### Operating Rules
+- **[interaction.md](agent/rules/interaction.md)**: Collaboration protocol, grilling mode, and zero-guessing standards.
+- **[safety.md](agent/rules/safety.md)**: Principle of least privilege, zero credential leaks, and destructive action gating.
+- **[code-quality.md](agent/rules/code-quality.md)**: Polyglot engineering standards, rust/systems invariants, and doc density.
+- **[git.md](agent/rules/git.md)**: Atomic diff hygiene and conventional commit authoring.
+
+### Registered Agent Skills
+- **[toolbox](agent/skills/toolbox/SKILL.md)**: Toolbox CLI discovery, execution, and category navigation.
+- **[git-assistant](agent/skills/git-assistant/SKILL.md)**: Git status inspection, branch hygiene, and commit authoring.
+- **[code-auditor](agent/skills/code-auditor/SKILL.md)**: Static code quality, script permissions, and secret scanning.
+- **[advanced-programmer](agent/skills/advanced-programmer/SKILL.md)**: Senior systems, backend, and full-stack development patterns.
+- **[readme-architect](agent/skills/readme-architect/SKILL.md)**: Authoring anti-hype, high-signal README files.
+- **[agents-architect](agent/skills/agents-architect/SKILL.md)**: Authoring and safely evolving AGENTS.md operating specifications.
+- **[repo-governance](agent/skills/repo-governance/SKILL.md)**: Open-source health checklists and the unbroken link graph.
+- **[release-architect](agent/skills/release-architect/SKILL.md)**: Drafting semantic GitHub release bodies, migration guides, and release gates.
+- **[security-hardener](agent/skills/security-hardener/SKILL.md)**: Secret defense, credential isolation, and memory-safe design.
+- **[root-cause-debugger](agent/skills/root-cause-debugger/SKILL.md)**: Forensic debugging, minimal reproducible examples, and invariant repair.
+- **[devops-architect](agent/skills/devops-architect/SKILL.md)**: CI workflows, GitHub Actions security, and toolchain pinning.
+- **[workflow-scaffolder](agent/skills/workflow-scaffolder/SKILL.md)**: Scaffolding reusable, self-documenting CLI scripts.
 
 ---
 

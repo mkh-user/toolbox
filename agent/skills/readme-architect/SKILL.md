@@ -43,7 +43,7 @@ Include a clean Mermaid flowchart or state diagram illustrating component bounda
 Feature a tabular breakdown of commands, flags, arguments, default values, and brief descriptions.
 
 ### AI Agent Integration
-Document how autonomous AI assistants discover, execute, and verify operations within the repository, linking directly to [AGENTS.md](file:///content/toolbox/AGENTS.md).
+Document how autonomous AI assistants discover, execute, and verify operations within the repository, linking directly to [AGENTS.md](../../../AGENTS.md).
 
 ### Governance and Licensing
 Link to contributing guidelines, security policies, and license files.
