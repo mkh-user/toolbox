@@ -1,14 +1,14 @@
 # Toolbox
 
-> Advanced skills and professional-grade tools to use everywhere.
+> Standalone, zero-dependency developer toolkit and AI agent operating framework.
 
-A modular, standalone developer and AI agent toolkit engineered for portability across Linux environments, Google Colab, and remote machines with zero mandatory dependencies.
+A modular, polyglot command center engineered for portability across Linux environments, Google Colab, and remote machines with zero mandatory dependencies.
 
 ---
 
 ## Quick Start
 
-Clone and run in-place without installing anything:
+Clone and run in-place without installing packages:
 
 ```bash
 git clone https://github.com/mkh-user/toolbox.git
@@ -22,7 +22,45 @@ cd toolbox
 
 # Full Colab environment initialization
 ./toolbox setup colab
+
+# Inspect all registered agent skills
+./toolbox skills list
 ```
+
+---
+
+## Why It Is Built This Way
+
+`toolbox` is designed around deliberate architectural choices that prioritize portability, developer ergonomics, and agent steerability:
+
+### Bash and POSIX for Core Utilities
+Developer tooling must run everywhere. By relying strictly on standard Bash and POSIX utilities for core execution, `toolbox` runs immediately on fresh Google Colab instances, remote SSH containers, and clean Linux distributions without requiring global pip installations, virtual environments, or compilation steps.
+
+### Dynamic Directory Auto-Discovery
+Adding a tool should require zero boilerplate. Any executable script placed in `tools/<category>/` with a `# Description:` header is dynamically registered by `./toolbox`. There are no centralized registry files to update and no CLI compilation steps.
+
+### Strict Category Namespacing
+Commands follow a predictable hierarchy: `./toolbox <category> <command> [args...]`. This prevents global command name collisions, organizes tools by domain, and allows both humans and AI agents to discover commands systematically.
+
+### Thoughtful Defaults
+- Drive not mounted? `./toolbox setup colab` detects and initializes Google Drive access.
+- GitHub token needed? `./toolbox setup gh` retrieves credentials strictly from Colab Userdata secrets without terminal exposure.
+- Cache cleanup? `./toolbox git clean` runs in non-destructive preview mode by default.
+- Script permissions dropped? `./toolbox audit check` audits executable bits and flags missing permissions.
+
+### Why Toolbox Instead of Existing Alternatives
+- Dotfile Managers such as Chezmoi or Dotbot: Excellent tools for managing symlinked configuration files across machines. What they do not provide is an autonomous AI agent operating manual, runtime credential bootstrapping, or cross-repo skill governance. Toolbox provides a unified operational framework.
+- Global Pip and Node Packages: Prone to Python version conflicts, broken system packages, and slow network installation during transient cloud sessions. Toolbox starts instantaneously with zero external dependencies.
+- Ad-Hoc Scripts and Gists: Hard to maintain, audit, or discover. Toolbox wraps standalone scripts in a dynamic CLI dispatcher with static bash syntax validation and secret scanning.
+
+### Scope and Focus
+- Lightweight and Portable: Dedicated to developer productivity, runtime persistence, and multi-repo AI agent guidance.
+- Not a Heavyweight Framework: Toolbox does not enforce intrusive runtime dependencies or dictate how target projects build their software.
+- Active Development: Features and agent skills evolve continuously to incorporate real-world systems engineering workflows.
+
+### Who It Is For
+- Systems and polyglot engineers working across Colab, cloud runtimes, and local environments.
+- Developers collaborating with autonomous AI coding assistants who require high-signal communication, rigorous systems standards, and zero guesswork.
 
 ---
 
@@ -60,13 +98,6 @@ toolbox/
     ├── skills/                 # Agent operational skills
     └── rules/                  # Behavioral and coding rulesets
 ```
-
-### Key Principles
-
-- **Zero Global Dependencies**: All core scripts run directly with standard Bash and preinstalled system utilities.
-- **Dynamic Auto-Discovery**: Dropping an executable script into `tools/<category>/` automatically exposes it in `./toolbox --help` and `./toolbox <category> --help` using its `# Description:` header.
-- **Strict Namespacing**: Every command is scoped to its domain via `./toolbox <category> <command>`.
-- **Agent Native**: Includes native skills and rulesets so LLM coding assistants discover and execute toolbox commands safely across any project.
 
 ---
 

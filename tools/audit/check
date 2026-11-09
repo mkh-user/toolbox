@@ -1,34 +1,40 @@
 #!/usr/bin/env bash
-# Description: Fast static audit of bash syntax, script permissions, and secret leaks
+# Description: Multi-repo static audit for bash syntax, permissions, secret leaks, heading laws, and links
 set -eo pipefail
 
 TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
 # shellcheck source=tools/lib/common.sh
 source "${TOOLBOX_ROOT}/tools/lib/common.sh"
 
-log_header "Repository Code & Security Audit"
+TARGET_DIR="${1:-$PWD}"
+if [[ ! -d "$TARGET_DIR" ]]; then
+    log_error "Target directory does not exist: ${TARGET_DIR}"
+    exit 1
+fi
+TARGET_DIR="$(cd -P "$TARGET_DIR" >/dev/null 2>&1 && pwd)"
+
+log_header "Repository Code and Security Audit"
+printf "${DIM}Auditing target: ${TARGET_DIR}${RESET}\n"
 
 ERRORS=0
 WARNINGS=0
 
-# 1. Shell Script Syntax Check (bash -n)
-printf "\n${BOLD}[1] Bash Syntax Validation (bash -n):${RESET}\n"
+# Bash Syntax Validation
+printf "\n${BOLD}Bash Syntax Validation${RESET}\n"
 SHELL_FILES=()
 
-# Find scripts
 while IFS= read -r f; do
     [[ -n "$f" ]] && SHELL_FILES+=("$f")
-done < <(find "$TOOLBOX_ROOT" -type f \( -name "*.sh" -o -perm -111 \) ! -path "*/.git/*" 2>/dev/null || true)
+done < <(find "$TARGET_DIR" -type f \( -name "*.sh" -o -perm -111 \) ! -path "*/.git/*" 2>/dev/null || true)
 
 SYNTAX_OK=0
 for f in "${SHELL_FILES[@]}"; do
-    # Check if file has a bash shebang or .sh extension
     first_line="$(head -n 1 "$f" 2>/dev/null || true)"
     if [[ "$f" == *.sh || "$first_line" =~ bash ]]; then
         if bash -n "$f" 2>/dev/null; then
             SYNTAX_OK=$((SYNTAX_OK + 1))
         else
-            log_error "Syntax error in: ${f#"${TOOLBOX_ROOT}/"}"
+            log_error "Syntax error in: ${f#"${TARGET_DIR}/"}"
             bash -n "$f" 2>&1 | sed 's/^/    /' || true
             ERRORS=$((ERRORS + 1))
         fi
@@ -39,32 +45,36 @@ if [[ $ERRORS -eq 0 ]]; then
     log_success "All ${SYNTAX_OK} shell script(s) passed syntax validation."
 fi
 
-# 2. Executable Permissions Audit
-printf "\n${BOLD}[2] Script Permissions Audit:${RESET}\n"
+# Script Permissions Audit
+printf "\n${BOLD}Script Permissions Audit${RESET}\n"
 NON_EXEC_TOOLS=0
-for cat_dir in "${TOOLBOX_ROOT}/tools"/*; do
-    if [[ -d "$cat_dir" ]]; then
-        cat_name="$(basename "$cat_dir")"
-        [[ "$cat_name" == "lib" ]] && continue
+if [[ -d "${TARGET_DIR}/tools" ]]; then
+    for cat_dir in "${TARGET_DIR}/tools"/*; do
+        if [[ -d "$cat_dir" ]]; then
+            cat_name="$(basename "$cat_dir")"
+            [[ "$cat_name" == "lib" ]] && continue
 
-        for tool_file in "${cat_dir}"/*; do
-            if [[ -f "$tool_file" && ! -x "$tool_file" ]]; then
-                log_warn "Missing executable permission (+x): ${tool_file#"${TOOLBOX_ROOT}/"}"
-                NON_EXEC_TOOLS=$((NON_EXEC_TOOLS + 1))
-                WARNINGS=$((WARNINGS + 1))
-            fi
-        done
+            for tool_file in "${cat_dir}"/*; do
+                if [[ -f "$tool_file" && ! -x "$tool_file" ]]; then
+                    log_warn "Missing executable permission (+x): ${tool_file#"${TARGET_DIR}/"}"
+                    NON_EXEC_TOOLS=$((NON_EXEC_TOOLS + 1))
+                    WARNINGS=$((WARNINGS + 1))
+                fi
+            done
+        fi
+    done
+
+    if [[ $NON_EXEC_TOOLS -eq 0 ]]; then
+        log_success "All tools in tools/ have valid executable permissions."
+    else
+        log_info "Fix with: chmod +x tools/*/*"
     fi
-done
-
-if [[ $NON_EXEC_TOOLS -eq 0 ]]; then
-    log_success "All tools in tools/ have valid executable permissions."
 else
-    log_info "Fix with: chmod +x tools/*/*"
+    log_info "No tools/ directory present in target; skipping category permission audit."
 fi
 
-# 3. Secret & Credential Leak Scan
-printf "\n${BOLD}[3] Secret & Credential Leak Scan:${RESET}\n"
+# Secret and Credential Leak Scan
+printf "\n${BOLD}Secret and Credential Leak Scan${RESET}\n"
 LEAK_COUNT=0
 
 SECRET_PATTERNS=(
@@ -76,7 +86,7 @@ SECRET_PATTERNS=(
 )
 
 for pattern in "${SECRET_PATTERNS[@]}"; do
-    matches="$(grep -rnE "$pattern" "$TOOLBOX_ROOT" \
+    matches="$(grep -rnE "$pattern" "$TARGET_DIR" \
         --exclude-dir=".git" \
         --exclude="*.tar.gz" \
         --exclude="check" 2>/dev/null || true)"
@@ -94,8 +104,112 @@ if [[ $LEAK_COUNT -eq 0 ]]; then
     log_success "No exposed credentials, private keys, or API tokens detected."
 fi
 
-# 4. Summary
-printf "\n${BOLD}Audit Summary:${RESET}\n"
+# Typography and Heading Laws Audit
+printf "\n${BOLD}Typography and Heading Laws Audit${RESET}\n"
+HEADING_ERRORS=0
+
+while IFS= read -r md_file; do
+    [[ -z "$md_file" ]] && continue
+    rel_path="${md_file#"${TARGET_DIR}/"}"
+    
+    line_num=0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line_num=$((line_num + 1))
+        if [[ "$line" =~ ^#+[[:space:]] ]]; then
+            # Check 1: Numbered headings
+            if [[ "$line" =~ ^#+[[:space:]]+[0-9]+[\.\)][[:space:]] ]]; then
+                log_error "${rel_path}:${line_num} Numbered heading detected: $line"
+                HEADING_ERRORS=$((HEADING_ERRORS + 1))
+            fi
+            # Check 2: Parenthetical headings
+            if [[ "$line" =~ ^#+[[:space:]].*\(.*\) ]]; then
+                log_error "${rel_path}:${line_num} Parenthetical heading detected: $line"
+                HEADING_ERRORS=$((HEADING_ERRORS + 1))
+            fi
+            # Check 3: Trailing punctuation in headings
+            if [[ "$line" =~ ^#+[[:space:]].*[:.]$ ]]; then
+                log_error "${rel_path}:${line_num} Trailing punctuation in heading detected: $line"
+                HEADING_ERRORS=$((HEADING_ERRORS + 1))
+            fi
+        fi
+    done < "$md_file"
+done < <(find "$TARGET_DIR" -type f -name "*.md" ! -path "*/.git/*" 2>/dev/null || true)
+
+if [[ $HEADING_ERRORS -eq 0 ]]; then
+    log_success "All markdown headings obey clean typography laws (no numbers, no parentheses, no trailing punctuation)."
+else
+    ERRORS=$((ERRORS + HEADING_ERRORS))
+fi
+
+# Markdown Link Integrity Audit
+printf "\n${BOLD}Markdown Link Integrity Audit${RESET}\n"
+LINK_ERRORS=0
+CHECKED_LINKS=0
+
+while IFS='|' read -r status arg1 arg2; do
+    if [[ "$status" == "BROKEN_LINK" ]]; then
+        # arg1: rel_doc, arg2: label:url
+        doc="${arg1}"
+        IFS=':' read -r label url <<< "$arg2"
+        log_error "${doc}: Broken link '[${label}](${url})' - target file does not exist."
+        ERRORS=$((ERRORS + 1))
+    elif [[ "$status" == "CHECKED_COUNT" ]]; then
+        count="${arg1}"
+        err_count="${arg2}"
+        if [[ "$err_count" -eq 0 ]]; then
+            log_success "Verified ${count} intra-document link(s) with zero broken references."
+        fi
+    fi
+done < <(python3 - "$TARGET_DIR" << 'EOF'
+import os, sys, re
+
+target_dir = sys.argv[1]
+link_pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+
+errors = 0
+checked = 0
+
+for root, _, files in os.walk(target_dir):
+    if '/.git' in root:
+        continue
+    for file in files:
+        if file.endswith('.md'):
+            file_path = os.path.join(root, file)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+            except Exception:
+                continue
+
+            # Strip fenced code blocks and inline code ticks
+            content_no_code = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
+            content_clean = re.sub(r'`[^`\n]+`', '', content_no_code)
+
+            for match in link_pattern.finditer(content_clean):
+                url = match.group(2).strip()
+                # Skip external web URLs, anchors, and protocols
+                if url.startswith(('http://', 'https://', 'mailto:', '#')):
+                    continue
+                
+                checked += 1
+                if url.startswith('file://'):
+                    resolved_path = url[7:].split('#')[0]
+                else:
+                    clean_rel = url.split('#')[0]
+                    resolved_path = os.path.normpath(os.path.join(root, clean_rel))
+
+                if not os.path.exists(resolved_path):
+                    rel_doc = os.path.relpath(file_path, target_dir)
+                    label = match.group(1).replace(':', '_')
+                    print(f'BROKEN_LINK|{rel_doc}|{label}:{url}')
+                    errors += 1
+
+print(f'CHECKED_COUNT|{checked}|{errors}')
+EOF
+)
+
+# Audit Summary
+printf "\n${BOLD}Audit Summary${RESET}\n"
 if [[ $ERRORS -eq 0 && $WARNINGS -eq 0 ]]; then
     log_success "Audit PASSED (0 errors, 0 warnings)."
     exit 0

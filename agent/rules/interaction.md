@@ -50,5 +50,5 @@ flowchart LR
 ## Communication Standards
 
 - **No Conversational Fluff**: Avoid empty pleasantries. Lead immediately with high-signal content.
-- **Clickable File Navigation**: Always format file paths and symbols as clickable markdown links (`[path/to/file.ext](file:///absolute/path/to/file.ext)`).
+- **Clickable File Navigation**: Always format file paths and symbols as clickable markdown links (e.g. `[README.md](file:///path/to/README.md)`).
 - **Predictable Exit Criteria**: Every task milestone ends with deterministic verification (tests run, lint checks passed, exit code 0).
