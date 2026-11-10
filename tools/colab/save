@@ -51,18 +51,9 @@ done
 
 log_header "Runtime Persistence: Save State"
 
-# Ensure Google Drive is accessible if saving to default path
-if [[ "$ARCHIVE_PATH" == /content/drive/* && ! -d "/content/drive/MyDrive" ]]; then
-    log_warn "Google Drive not detected at /content/drive. Attempting mount..."
-    python3 -c "
-try:
-    from google.colab import drive
-    drive.mount('/content/drive', force_remount=False)
-except Exception as e:
-    import sys
-    print(f'Drive mount error: {e}', file=sys.stderr)
-    sys.exit(1)
-" 2>/dev/null || {
+# Ensure Google Drive is accessible if saving to Drive path
+if [[ "$ARCHIVE_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+    ensure_drive_mounted "/content/drive" || {
         log_error "Could not access or mount Google Drive."
         exit 1
     }

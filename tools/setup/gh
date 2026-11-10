@@ -1,54 +1,222 @@
 #!/usr/bin/env bash
-# Description: Authenticate GitHub CLI using GH_TOKEN strictly from Google Colab Secrets
+# Description: Save, restore, or authenticate GitHub CLI token (Colab Secrets & Drive)
 set -eo pipefail
 
 TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
 # shellcheck source=tools/lib/common.sh
 source "${TOOLBOX_ROOT}/tools/lib/common.sh"
 
-log_header "GitHub CLI Setup (Colab Secrets)"
+DEFAULT_BACKUP_PATH="/content/drive/MyDrive/.secrets/gh-token"
 
-# 1. Verify gh is installed
-if ! has_cmd gh; then
-    log_error "GitHub CLI (gh) is not installed."
-    log_info "On Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y gh"
-    exit 1
-fi
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox setup gh [command] [options]\n\n"
+    printf "${BOLD}Commands:${RESET}\n"
+    printf "  ${BOLD}restore${RESET}    Authenticate GitHub CLI from Colab Secrets, Drive backup, or env (default)\n"
+    printf "  ${BOLD}save${RESET}       Save active GitHub token to Google Drive backup\n"
+    printf "  ${BOLD}status${RESET}     Check GitHub CLI installation, authentication, secrets, and backup token\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --path, -p <path>  Specify custom backup path (default: ${CYAN}%s${RESET})\n" "$DEFAULT_BACKUP_PATH"
+    printf "  --help, -h         Show this help message\n\n"
+}
 
-# 2. Retrieve GH_TOKEN strictly from Google Colab userdata
-log_info "Fetching 'GH_TOKEN' from Google Colab Secrets..."
+ACTION="restore"
+BACKUP_PATH="$DEFAULT_BACKUP_PATH"
 
-TOKEN="$(python3 -c "
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        save|backup|export)
+            ACTION="save"
+            shift
+            ;;
+        restore|auth|login|import)
+            ACTION="restore"
+            shift
+            ;;
+        status|check)
+            ACTION="status"
+            shift
+            ;;
+        --path|-p)
+            BACKUP_PATH="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+case "$ACTION" in
+    save)
+        log_header "GitHub Token: Save to Backup"
+        if ! has_cmd gh; then
+            log_error "GitHub CLI (gh) is not installed."
+            exit 1
+        fi
+
+        CURRENT_TOKEN=""
+        # 1. Try active gh CLI session
+        if gh auth status >/dev/null 2>&1; then
+            CURRENT_TOKEN="$(gh auth token 2>/dev/null || true)"
+        fi
+
+        # 2. Try environment variables
+        if [[ -z "$CURRENT_TOKEN" ]]; then
+            CURRENT_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+        fi
+
+        # 3. Try Colab Secrets
+        if [[ -z "$CURRENT_TOKEN" ]]; then
+            CURRENT_TOKEN="$(python3 -c "
 import sys
 try:
     from google.colab import userdata
-    token = userdata.get('GH_TOKEN')
-    if token:
-        print(token.strip())
+    t = userdata.get('GH_TOKEN')
+    if t:
+        print(t.strip())
+except Exception:
+    pass
+" 2>/dev/null || true)"
+        fi
+
+        if [[ -z "$CURRENT_TOKEN" ]]; then
+            log_error "No active GitHub token detected to back up."
+            log_info "Authenticate first with 'gh auth login' or provide GH_TOKEN in environment/Colab Secrets."
+            exit 1
+        fi
+
+        # Ensure Drive is mounted if backing up to Drive path
+        if [[ "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+            ensure_drive_mounted "/content/drive" || {
+                log_error "Could not access or mount Google Drive."
+                exit 1
+            }
+        fi
+
+        BACKUP_DIR="$(dirname "$BACKUP_PATH")"
+        mkdir -p "$BACKUP_DIR"
+        (
+            umask 077
+            printf "%s\n" "$CURRENT_TOKEN" > "$BACKUP_PATH"
+        )
+        chmod 600 "$BACKUP_PATH" 2>/dev/null || true
+        log_success "GitHub token backed up successfully to: ${CYAN}${BACKUP_PATH}${RESET}"
+        ;;
+
+    restore)
+        log_header "GitHub CLI Setup (Colab Secrets & Drive)"
+        if ! has_cmd gh; then
+            log_error "GitHub CLI (gh) is not installed."
+            log_info "On Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y gh"
+            exit 1
+        fi
+
+        TOKEN=""
+        TOKEN_SOURCE=""
+
+        # Check Colab Secrets first
+        COLAB_TOKEN="$(python3 -c "
+import sys
+try:
+    from google.colab import userdata
+    t = userdata.get('GH_TOKEN')
+    if t:
+        print(t.strip())
     else:
         sys.exit(1)
-except Exception as e:
+except Exception:
     sys.exit(1)
 " 2>/dev/null || true)"
 
-if [[ -z "$TOKEN" ]]; then
-    log_error "Failed to retrieve 'GH_TOKEN' from Google Colab Secrets."
-    printf "\n${YELLOW}How to fix:${RESET}\n"
-    printf "  1. In the Colab sidebar, click the Key icon (Secrets / User Data).\n"
-    printf "  2. Add a new secret with Name: ${BOLD}GH_TOKEN${RESET}\n"
-    printf "  3. Paste your GitHub Personal Access Token into Value.\n"
-    printf "  4. Ensure 'Notebook access' toggle is ENABLED for this notebook.\n\n"
-    exit 1
-fi
+        if [[ -n "$COLAB_TOKEN" ]]; then
+            TOKEN="$COLAB_TOKEN"
+            TOKEN_SOURCE="Google Colab Secrets"
+        fi
 
-# 3. Authenticate with gh
-log_info "Authenticating with GitHub CLI..."
-if printf "%s" "$TOKEN" | gh auth login --with-token 2>/dev/null; then
-    log_success "Successfully authenticated with GitHub CLI."
-else
-    log_error "GitHub authentication failed. Please check that GH_TOKEN has valid permissions."
-    exit 1
-fi
+        # If not in Secrets, check Drive backup file (auto-mount Drive if needed)
+        if [[ -z "$TOKEN" && "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+            ensure_drive_mounted "/content/drive" || true
+        fi
 
-# 4. Display status
-gh auth status || true
+        if [[ -z "$TOKEN" && -s "$BACKUP_PATH" ]]; then
+            TOKEN="$(head -n 1 "$BACKUP_PATH" | tr -d '\r\n')"
+            TOKEN_SOURCE="Google Drive backup (${BACKUP_PATH})"
+        fi
+
+        # If not in Drive, check environment variable
+        if [[ -z "$TOKEN" && -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]]; then
+            TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+            TOKEN_SOURCE="Environment variable (GH_TOKEN/GITHUB_TOKEN)"
+        fi
+
+        if [[ -z "$TOKEN" ]]; then
+            log_error "Failed to retrieve GitHub token from Colab Secrets, Drive backup, or environment."
+            if [[ "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+                log_warn "Google Drive is NOT mounted at /content/drive."
+                log_info "Run './toolbox setup drive' to mount Drive automatically."
+            fi
+            printf "\n${YELLOW}How to configure your GitHub token:${RESET}\n"
+            printf "  1. Drive backup: Save your active token with '${BOLD}./toolbox setup gh save${RESET}' (or write to ${CYAN}%s${RESET})\n" "$BACKUP_PATH"
+            printf "  2. Colab Secrets: In Colab sidebar, click the Key icon -> add secret '${BOLD}GH_TOKEN${RESET}' with Notebook access enabled.\n"
+            printf "  3. Environment: export ${BOLD}GH_TOKEN${RESET}=<your-token>\n\n"
+            exit 1
+        fi
+
+        log_info "Authenticating with GitHub CLI using token from ${TOKEN_SOURCE}..."
+        if printf "%s" "$TOKEN" | gh auth login --with-token 2>/dev/null; then
+            log_success "Successfully authenticated with GitHub CLI."
+        else
+            log_error "GitHub authentication failed. Please verify that the token has valid permissions."
+            exit 1
+        fi
+
+        gh auth status || true
+        ;;
+
+    status)
+        log_header "GitHub CLI & Token Status"
+        if has_cmd gh; then
+            log_success "GitHub CLI (gh) is installed: $(gh --version | head -n 1)"
+            if gh auth status >/dev/null 2>&1; then
+                log_success "GitHub CLI is currently authenticated:"
+                gh auth status 2>&1 | sed 's/^/    /' || true
+            else
+                log_warn "GitHub CLI is not currently authenticated"
+                log_info "Run './toolbox setup gh' to authenticate using Drive backup or Colab Secrets."
+            fi
+        else
+            log_error "GitHub CLI (gh) is not installed."
+        fi
+
+        COLAB_SECRET="$(python3 -c "
+try:
+    from google.colab import userdata
+    t = userdata.get('GH_TOKEN')
+    print('yes' if t and len(t.strip()) > 0 else 'no')
+except Exception:
+    print('error')
+" 2>/dev/null || echo 'error')"
+
+        if [[ "$COLAB_SECRET" == "yes" ]]; then
+            log_success "Colab Secret 'GH_TOKEN' is available in Colab Userdata"
+        elif [[ "$COLAB_SECRET" == "no" ]]; then
+            log_warn "Colab Secret 'GH_TOKEN' is empty or missing from Colab Userdata"
+        else
+            log_info "Colab Secret 'GH_TOKEN': Userdata module not active (outside interactive notebook kernel)"
+        fi
+
+        if [[ -s "$BACKUP_PATH" ]]; then
+            log_success "Backup GitHub token present: ${BACKUP_PATH}"
+        else
+            log_warn "Backup GitHub token missing at: ${BACKUP_PATH}"
+            log_info "Once authenticated, save your token to Drive with: ./toolbox setup gh save"
+        fi
+        ;;
+esac

@@ -17,8 +17,8 @@ else
     log_info "Run './toolbox setup colab' to mount it."
 fi
 
-# 2. Google Colab Secret (GH_TOKEN)
-printf "\n${BOLD}[2] Google Colab Secret (GH_TOKEN):${RESET}\n"
+# 2. GitHub Credentials (Colab Secret & Drive Backup)
+printf "\n${BOLD}[2] GitHub Credentials (Colab Secret & Drive Backup):${RESET}\n"
 HAS_SECRET="$(python3 -c "
 try:
     from google.colab import userdata
@@ -37,6 +37,14 @@ else
     log_info "Colab userdata module not present (not running inside interactive Colab notebook kernel)"
 fi
 
+GH_BACKUP_TOKEN="/content/drive/MyDrive/.secrets/gh-token"
+if [[ -s "$GH_BACKUP_TOKEN" ]]; then
+    log_success "Backup GitHub token found: ${GH_BACKUP_TOKEN}"
+else
+    log_warn "Backup GitHub token missing at: ${GH_BACKUP_TOKEN}"
+    log_info "Once authenticated, save your token to Drive with: ./toolbox setup gh save"
+fi
+
 # 3. GitHub CLI Installation & Auth
 printf "\n${BOLD}[3] GitHub CLI (gh):${RESET}\n"
 if has_cmd gh; then
@@ -46,7 +54,7 @@ if has_cmd gh; then
         gh auth status 2>&1 | sed 's/^/    /' || true
     else
         log_warn "GitHub CLI is not authenticated"
-        log_info "Run './toolbox setup gh' to authenticate using your GH_TOKEN secret."
+        log_info "Run './toolbox setup gh' to authenticate using Drive backup or Colab Secrets."
     fi
 else
     log_error "GitHub CLI (gh) is not installed."

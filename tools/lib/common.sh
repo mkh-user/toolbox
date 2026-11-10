@@ -82,3 +82,48 @@ confirm_action() {
 
     [[ "$answer" =~ ^[Yy]$ ]]
 }
+
+# Check if Google Drive is currently mounted
+is_drive_mounted() {
+    local mount_point="${1:-/content/drive}"
+    [[ -d "${mount_point}/MyDrive" ]]
+}
+
+# Ensure Google Drive is mounted, attempting mount if not already accessible
+ensure_drive_mounted() {
+    local mount_point="${1:-/content/drive}"
+    local force_remount="${2:-false}"
+
+    if [[ "$force_remount" != "true" ]] && is_drive_mounted "$mount_point"; then
+        return 0
+    fi
+
+    log_info "Google Drive not detected at ${mount_point}. Attempting mount..."
+
+    local mount_err
+    if ! mount_err="$(python3 -c "
+import sys
+try:
+    from google.colab import drive
+    force = ('${force_remount}' == 'true')
+    drive.mount('${mount_point}', force_remount=force)
+except Exception as e:
+    print(f'{e}', file=sys.stderr)
+    sys.exit(1)
+" 2>&1)"; then
+        log_error "Failed to mount Google Drive at ${mount_point}."
+        if [[ -n "$mount_err" ]]; then
+            printf "    %s\n" "$mount_err" >&2
+        fi
+        return 1
+    fi
+
+    if is_drive_mounted "$mount_point"; then
+        log_success "Google Drive mounted successfully at ${mount_point}."
+        return 0
+    else
+        log_error "Google Drive mount succeeded but ${mount_point}/MyDrive not accessible."
+        return 1
+    fi
+}
+

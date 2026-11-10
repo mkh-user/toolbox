@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Description: One-stop Colab init: mount Google Drive, authenticate gh from secrets, restore agy token
+# Description: One-stop Colab init: mount Google Drive, authenticate gh from secrets or Drive, restore agy token
 set -eo pipefail
 
 TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
@@ -10,22 +10,14 @@ log_header "Google Colab Environment Initialization"
 
 # 1. Mount Google Drive if not already mounted
 log_info "Step 1/3: Checking Google Drive mount..."
-python3 -c "
-import os, sys
-try:
-    if os.path.isdir('/content/drive/MyDrive'):
-        print('Google Drive is already mounted at /content/drive')
-    else:
-        from google.colab import drive
-        print('Mounting Google Drive at /content/drive...')
-        drive.mount('/content/drive', force_remount=False)
-except Exception as e:
-    print(f'Error mounting Google Drive: {e}', file=sys.stderr)
-    sys.exit(1)
-"
+if is_drive_mounted; then
+    log_success "Google Drive is already mounted at /content/drive"
+else
+    ensure_drive_mounted "/content/drive"
+fi
 log_success "Google Drive ready."
 
-# 2. Authenticate GitHub CLI from Colab Secrets
+# 2. Authenticate GitHub CLI from Colab Secrets or Google Drive backup
 log_info "Step 2/3: Configuring GitHub CLI authentication..."
 if "${TOOLBOX_ROOT}/tools/setup/gh"; then
     log_success "GitHub CLI configured."

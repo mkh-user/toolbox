@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Description: Mount Google Drive at /content/drive with verification and status inspection
+set -eo pipefail
+
+TOOLBOX_ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+# shellcheck source=tools/lib/common.sh
+source "${TOOLBOX_ROOT}/tools/lib/common.sh"
+
+DEFAULT_MOUNT_POINT="/content/drive"
+
+show_usage() {
+    printf "${BOLD}Usage:${RESET}\n"
+    printf "  ./toolbox setup drive [command] [options]\n\n"
+    printf "${BOLD}Commands:${RESET}\n"
+    printf "  ${BOLD}mount${RESET}             Mount Google Drive if not already mounted (default action)\n"
+    printf "  ${BOLD}status${RESET}            Inspect current Google Drive mount status\n\n"
+    printf "${BOLD}Options:${RESET}\n"
+    printf "  --force, -f        Force remount even if already mounted\n"
+    printf "  --mount, -m <dir>  Specify custom mount point (default: ${CYAN}%s${RESET})\n" "$DEFAULT_MOUNT_POINT"
+    printf "  --help, -h         Show this help message\n\n"
+}
+
+ACTION="mount"
+FORCE="false"
+MOUNT_POINT="$DEFAULT_MOUNT_POINT"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        mount)
+            ACTION="mount"
+            shift
+            ;;
+        status|check)
+            ACTION="status"
+            shift
+            ;;
+        --force|-f)
+            FORCE="true"
+            shift
+            ;;
+        --mount|-m)
+            MOUNT_POINT="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            log_error "Unknown option: $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+case "$ACTION" in
+    status)
+        log_header "Google Drive Mount Status"
+        if is_drive_mounted "$MOUNT_POINT"; then
+            log_success "Google Drive is mounted at: ${MOUNT_POINT}"
+            log_info "MyDrive folder contents: $(ls -A "${MOUNT_POINT}/MyDrive" 2>/dev/null | wc -l | tr -d ' ') items detected"
+        else
+            log_warn "Google Drive is NOT mounted at: ${MOUNT_POINT}"
+            log_info "Mount Google Drive with: ./toolbox setup drive"
+            exit 1
+        fi
+        ;;
+
+    mount)
+        log_header "Google Drive Mount"
+        if [[ "$FORCE" != "true" ]] && is_drive_mounted "$MOUNT_POINT"; then
+            log_success "Google Drive is already mounted at ${MOUNT_POINT}."
+            exit 0
+        fi
+
+        if ensure_drive_mounted "$MOUNT_POINT" "$FORCE"; then
+            log_success "Google Drive ready at ${MOUNT_POINT}."
+        else
+            log_error "Failed to mount Google Drive at ${MOUNT_POINT}."
+            exit 1
+        fi
+        ;;
+esac

@@ -10,7 +10,7 @@ Welcome to `toolbox`. This file serves as the definitive operating manual and be
 
 ```mermaid
 flowchart TD
-    CLI["<b>Root CLI Dispatcher</b><br/>./toolbox"] --> Setup["<b>setup</b><br/>gh, agy, colab, status"]
+    CLI["<b>Root CLI Dispatcher</b><br/>./toolbox"] --> Setup["<b>setup</b><br/>drive, gh, agy, colab, status"]
     CLI --> Colab["<b>colab</b><br/>save, restore"]
     CLI --> SkillsTool["<b>skills</b><br/>list, show"]
     CLI --> Audit["<b>audit</b><br/>check"]
@@ -99,8 +99,9 @@ toolbox/
 │   │   └── common.sh           # Sourced helper library
 │   ├── setup/                  # Environment bootstrapping
 │   │   ├── status              # Credentials and mount auditor
+│   │   ├── drive               # Google Drive mount and verification
 │   │   ├── colab               # Drive mount, gh login, agy restore
-│   │   ├── gh                  # GitHub CLI login via Colab Secrets
+│   │   ├── gh                  # GitHub CLI login via Colab Secrets or Drive backup
 │   │   └── agy                 # Backup and restore Antigravity tokens
 │   ├── colab/                  # Cloud runtime persistence
 │   │   ├── save                # Backup dotfiles to Google Drive tarball

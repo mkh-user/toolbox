@@ -63,11 +63,21 @@ One-stop Colab initialization:
 ```
 Mounts Google Drive at `/content/drive`, logs in to GitHub CLI using `GH_TOKEN` from Colab Userdata, and restores the cached Antigravity token.
 
-GitHub CLI setup:
+Mount Google Drive:
+```bash
+./toolbox setup drive
+./toolbox setup drive status
+```
+Mounts Google Drive at `/content/drive` if not already mounted, and provides status inspection and forced remounting options.
+
+GitHub CLI token management:
 ```bash
 ./toolbox setup gh
+./toolbox setup gh save
+./toolbox setup gh restore
+./toolbox setup gh status
 ```
-Authenticates `gh` using strictly the `GH_TOKEN` secret in Colab Userdata.
+Authenticates `gh` using Colab Secrets, Google Drive backup (`/content/drive/MyDrive/.secrets/gh-token`), or environment variables. Supports saving active credentials to Google Drive and restoring them across cloud runtimes.
 
 Antigravity token management:
 ```bash

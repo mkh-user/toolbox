@@ -81,6 +81,26 @@ run_test "Audit Check Help Option" \
     "${TOOLBOX_ROOT}/toolbox audit check --help" \
     "Usage: ./toolbox audit check [path]"
 
+# Test 11: Setup GitHub Help Option
+run_test "Setup GitHub Help Option" \
+    "${TOOLBOX_ROOT}/toolbox setup gh --help" \
+    "Usage:"
+
+# Test 12: Setup GitHub Status Inspection
+run_test "Setup GitHub Status Inspection" \
+    "${TOOLBOX_ROOT}/toolbox setup gh status" \
+    "GitHub CLI & Token Status"
+
+# Test 13: Setup Drive Help Option
+run_test "Setup Drive Help Option" \
+    "${TOOLBOX_ROOT}/toolbox setup drive --help" \
+    "Usage:"
+
+# Test 14: Setup Drive Status Inspection
+run_test "Setup Drive Status Inspection" \
+    "${TOOLBOX_ROOT}/toolbox setup drive status" \
+    "Google Drive Mount Status"
+
 printf "\n${BOLD}Test Summary:${RESET}\n"
 printf "  Total Tests: %d\n" $((PASSED + FAILED))
 printf "  Passed:      ${GREEN}%d${RESET}\n" "$PASSED"

@@ -9,6 +9,15 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 ## Unreleased
 
 ### Added
+- **Centralized Drive Auto-Mount and Setup Drive Command**:
+  - Added centralized `ensure_drive_mounted` and `is_drive_mounted` helper functions in `tools/lib/common.sh`.
+  - Added standalone `tools/setup/drive` command (`./toolbox setup drive`) supporting auto-mount, status inspection, and forced remounts.
+  - Updated `tools/setup/gh`, `tools/setup/agy`, `tools/setup/colab`, `tools/colab/save`, and `tools/colab/restore` to automatically mount Google Drive whenever accessing Drive paths.
+- **GitHub Token Drive Backup and Multi-Source Authentication**:
+  - Enhanced `tools/setup/gh` to support full token lifecycle commands: `save`, `restore`/`auth`, and `status`.
+  - Added Google Drive backup storage (`/content/drive/MyDrive/.secrets/gh-token`) matching the Antigravity token pattern, with secure `chmod 600` permissions.
+  - Multi-source resolution: seamlessly authenticates via Google Colab Secrets, Google Drive backup, or environment variables (`GH_TOKEN`, `GITHUB_TOKEN`).
+  - Updated `tools/setup/status` and `tools/setup/colab` to inspect and utilize both Colab Secrets and Drive backup tokens.
 - **Continuous Integration Pipeline**:
   - Added `.github/workflows/ci.yml` running static code/security audits and automated tests on pushes and PRs to `main` using least-privilege `contents: read` permissions and dynamically verified `actions/checkout@v7`.
 - **Automated Regression Test Suite**:

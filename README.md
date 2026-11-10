@@ -43,8 +43,8 @@ Adding a tool should require zero boilerplate. Any executable script placed in `
 Commands follow a predictable hierarchy: `./toolbox <category> <command> [args...]`. This prevents global command name collisions, organizes tools by domain, and allows both humans and AI agents to discover commands systematically.
 
 ### Thoughtful Defaults
-- Drive not mounted? `./toolbox setup colab` detects and initializes Google Drive access.
-- GitHub token needed? `./toolbox setup gh` retrieves credentials strictly from Colab Userdata secrets without terminal exposure.
+- Drive not mounted? `./toolbox setup drive` or `./toolbox setup colab` detects and initializes Google Drive access automatically.
+- GitHub token needed? `./toolbox setup gh` retrieves credentials from Colab Secrets, Google Drive backup, or environment variables.
 - Code health? `./toolbox audit check` verifies bash syntax, permissions, secret hygiene, and relative link integrity.
 - Script permissions dropped? `./toolbox audit check` audits executable bits and flags missing permissions.
 
@@ -111,8 +111,12 @@ toolbox/
 | Command | Description |
 |---|---|
 | `./toolbox setup status` | Non-destructive audit of Google Drive mount, Colab Secrets, GitHub CLI, and Antigravity tokens. |
-| `./toolbox setup colab` | One-click setup: mounts Google Drive, authenticates `gh` via `GH_TOKEN` secret, and restores `agy` token. |
-| `./toolbox setup gh` | Authenticates GitHub CLI using strictly the `GH_TOKEN` stored in Google Colab Secrets (`userdata`). |
+| `./toolbox setup drive` | Mounts Google Drive at `/content/drive` if not already mounted (supports `--force` and `status`). |
+| `./toolbox setup colab` | One-click setup: mounts Google Drive, authenticates `gh` via secrets or Drive, and restores `agy` token. |
+| `./toolbox setup gh` | Authenticates GitHub CLI using Colab Secrets, Google Drive backup (`.secrets/gh-token`), or environment. |
+| `./toolbox setup gh save` | Backs up active GitHub CLI token to Google Drive (`/content/drive/MyDrive/.secrets/gh-token`). |
+| `./toolbox setup gh restore` | Restores/authenticates GitHub CLI from Google Drive backup or Colab Secrets. |
+| `./toolbox setup gh status` | Inspects GitHub CLI installation, authentication status, Colab Secret, and Drive backup. |
 | `./toolbox setup agy save` | Backs up local Antigravity token to Google Drive. |
 | `./toolbox setup agy restore` | Restores Antigravity token from Google Drive to local config with `chmod 600`. |
 | `./toolbox setup agy status` | Checks existence and validity of local and backup tokens. |

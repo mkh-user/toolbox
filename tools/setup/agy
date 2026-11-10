@@ -63,6 +63,14 @@ case "$ACTION" in
             exit 1
         fi
 
+        # Ensure Drive is mounted if saving to Drive path
+        if [[ "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+            ensure_drive_mounted "/content/drive" || {
+                log_error "Could not access or mount Google Drive."
+                exit 1
+            }
+        fi
+
         BACKUP_DIR="$(dirname "$BACKUP_PATH")"
         mkdir -p "$BACKUP_DIR"
         cp "$LOCAL_TOKEN_FILE" "$BACKUP_PATH"
@@ -72,11 +80,16 @@ case "$ACTION" in
 
     restore)
         log_header "Antigravity Token: Restore from Backup"
+        # Auto-mount Google Drive if restoring from a Drive path
+        if [[ "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
+            ensure_drive_mounted "/content/drive" || true
+        fi
+
         if [[ ! -s "$BACKUP_PATH" ]]; then
             log_error "Backup token file not found or empty: ${BACKUP_PATH}"
-            if [[ "$BACKUP_PATH" == /content/drive/* && ! -d "/content/drive/MyDrive" ]]; then
+            if [[ "$BACKUP_PATH" == /content/drive/* ]] && ! is_drive_mounted "/content/drive"; then
                 log_warn "Google Drive does not appear to be mounted at /content/drive."
-                log_info "Run './toolbox setup colab' to mount Drive and restore automatically."
+                log_info "Run './toolbox setup drive' to mount Drive automatically."
             fi
             exit 1
         fi
