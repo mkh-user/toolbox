@@ -63,7 +63,6 @@ case "$ACTION" in
         else
             log_warn "Google Drive is NOT mounted at: ${MOUNT_POINT}"
             log_info "Mount Google Drive with: ./toolbox setup drive"
-            exit 1
         fi
         ;;
 
