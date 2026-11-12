@@ -163,8 +163,12 @@ while IFS= read -r md_file; do
                 log_error "${rel_path}:${line_num} Numbered heading detected: $line"
                 HEADING_ERRORS=$((HEADING_ERRORS + 1))
             fi
-            # Check 2: Parenthetical headings
-            if [[ "$line" =~ ^#+[[:space:]].*\(.*\) ]]; then
+            # Check 2: Parenthetical headings (ignoring markdown links and badges)
+            clean_line="$line"
+            for _ in 1 2 3; do
+                clean_line=$(echo "$clean_line" | sed -E "s/!?[[][^][]*[]]\([^)]*\)//g")
+            done
+            if [[ "$clean_line" =~ ^#+[[:space:]].*\(.*\) ]]; then
                 log_error "${rel_path}:${line_num} Parenthetical heading detected: $line"
                 HEADING_ERRORS=$((HEADING_ERRORS + 1))
             fi
