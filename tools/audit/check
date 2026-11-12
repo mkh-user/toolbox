@@ -120,6 +120,8 @@ SECRET_PATTERNS=(
 for pattern in "${SECRET_PATTERNS[@]}"; do
     matches="$(grep -rnE "$pattern" "$TARGET_DIR" \
         --exclude-dir=".git" \
+        --exclude-dir="target" \
+        --exclude-dir="_cache" \
         --exclude="*.tar.gz" \
         --exclude="check" 2>/dev/null || true)"
     
