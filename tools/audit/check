@@ -145,8 +145,18 @@ while IFS= read -r md_file; do
     rel_path="${md_file#"${TARGET_DIR}/"}"
     
     line_num=0
+    in_code=0
     while IFS= read -r line || [[ -n "$line" ]]; do
         line_num=$((line_num + 1))
+        if [[ "$line" =~ ^\`\`\` ]]; then
+            if [[ $in_code -eq 0 ]]; then
+                in_code=1
+            else
+                in_code=0
+            fi
+            continue
+        fi
+        [[ $in_code -eq 1 ]] && continue
         if [[ "$line" =~ ^#+[[:space:]] ]]; then
             # Check 1: Numbered headings
             if [[ "$line" =~ ^#+[[:space:]]+[0-9]+[\.\)][[:space:]] ]]; then
@@ -207,11 +217,14 @@ for root, _, files in os.walk(target_dir):
     for file in files:
         if file.endswith('.md'):
             file_path = os.path.join(root, file)
+            real_path = os.path.realpath(file_path)
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
             except Exception:
                 continue
+
+            base_dir = os.path.dirname(real_path)
 
             # Strip fenced code blocks and inline code ticks
             content_no_code = re.sub(r'```.*?```', '', content, flags=re.DOTALL)
@@ -226,11 +239,19 @@ for root, _, files in os.walk(target_dir):
                 checked += 1
                 if url.startswith('file://'):
                     resolved_path = url[7:].split('#')[0]
+                    exists = os.path.exists(resolved_path)
                 else:
                     clean_rel = url.split('#')[0]
-                    resolved_path = os.path.normpath(os.path.join(root, clean_rel))
+                    if not clean_rel:
+                        continue
+                    resolved_path = os.path.normpath(os.path.join(base_dir, clean_rel))
+                    exists = (
+                        os.path.exists(resolved_path)
+                        or os.path.exists(resolved_path + '.md')
+                        or os.path.exists(os.path.join(resolved_path, 'index.md'))
+                    )
 
-                if not os.path.exists(resolved_path):
+                if not exists:
                     rel_doc = os.path.relpath(file_path, target_dir)
                     label = match.group(1).replace(':', '_')
                     print(f'BROKEN_LINK|{rel_doc}|{label}:{url}')
